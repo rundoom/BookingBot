@@ -9,7 +9,7 @@ class MonthPick(BaseFilter):
 
 class DayPick(BaseFilter):
     def filter(self, message):
-        return resolve_stance(message, datacore.consts.DAY_PICKED)
+        return resolve_stance_for_callback(message, datacore.consts.DAY_PICKED)
 
 
 class InitPick(BaseFilter):

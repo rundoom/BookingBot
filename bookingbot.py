@@ -29,12 +29,7 @@ def book(bot, update):
 
 
 def echo(bot, update):
-    username = update.message.chat_id
-    text = update.message.text
     bot.send_message(chat_id=update.message.chat_id, text=f"Введите /book для того чтобы назначить время")
-
-    logging.info(text)
-    logging.info(username)
 
 
 def start(bot, update):
@@ -42,25 +37,20 @@ def start(bot, update):
 
 
 def start_to_end_time_pick(bot, update):
-    username = update.message.chat_id
-    text = update.message.text
-    bot.send_message(chat_id=update.message.chat_id,
-                     text=f"В этот день свободны: ")
-
-    possible_time = dateutil.possible_time()
-
-    time_keys = [[InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.START_TIME_PICKED, call_val=x).to_json())] for x in possible_time]
-
-    bot.send_message(chat_id=update.message.chat_id, text="На какое время?",
-                     reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
-
-    logging.info(text)
-    logging.info(username)
-
-
-def time_pick(bot, update):
     query = update.callback_query
-    logging.info(query.data)
+    username = query.message.chat_id
+    bot.send_message(chat_id=username,
+                     text=f"Время начала: {data_as_json(query.data).call_val}")
+
+    time_keys = [
+        [InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.END_TIME_PICKED, call_val=x).to_json())
+         for x in dateutil.possible_time()][x:x + 4] for x in range(0, len(dateutil.possible_time()), 4)]
+
+    repository.update_stance(stance=consts.START_TIME_PICKED, user=username)
+    repository.update_data(user=username, data=CallData(call_type=consts.START_TIME_PICKED, call_val=data_as_json(query.data).call_val))
+
+    bot.send_message(chat_id=username, text="До какого времени?",
+                     reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
 
 
 def day_to_time_pick(bot, update):
@@ -85,13 +75,9 @@ def day_to_time_pick(bot, update):
         bot.send_message(chat_id=update.message.chat_id,
                          text=f"Допустимые значения: {dateutil.available_from_to(picked_month)[0]} - {monthrange(year=current_date.year, month=current_date.month)[1]}")
 
-    logging.info(text)
-    logging.info(username)
-
 
 def month_to_day_pick(bot, update):
     query = update.callback_query
-    logging.info(query.data)
 
     bot.send_message(text=f"Выбран {dateutil.month_map[data_as_json(query.data).call_val]}",
                      chat_id=query.message.chat_id,
@@ -119,10 +105,9 @@ dispatcher_handlers = [
     CommandHandler('start', start),
     CommandHandler('book', book),
     MessageHandler(Filters.text & filters.filter_day_to_time_pick, day_to_time_pick),
-    MessageHandler(Filters.text & filters.filter_start_to_end_time_pick, start_to_end_time_pick),
     MessageHandler(Filters.text, echo),
     FilteredCallbackQueryHandler(filters=filters.filter_month_to_day_pick, callback=month_to_day_pick),
-    FilteredCallbackQueryHandler(filters=filters.filter_time_pick, callback=time_pick),
+    FilteredCallbackQueryHandler(filters=filters.filter_start_to_end_time_pick, callback=start_to_end_time_pick),
     CallbackQueryHandler(callback=unresolved_pick)
 ]
 

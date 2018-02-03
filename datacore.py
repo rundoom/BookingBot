@@ -1,5 +1,6 @@
 import json
 from _datetime import datetime
+import logging
 
 
 class Consts:
@@ -43,6 +44,7 @@ class Repository:
         self.user_data = {}
 
     def update_stance(self, stance: str, user: str):
+        logging.info(f"user: {user} in {stance}")
         self.user_stances[user] = stance
 
     def update_data(self, data: CallData, user: str):
@@ -51,6 +53,7 @@ class Repository:
         else:
             user_inner = {data.call_type: data.call_val}
             self.user_data[user] = user_inner
+        logging.info(f"user: {user} input data {self.user_data[user]}")
 
 
 repository = Repository()
