@@ -8,18 +8,18 @@ class DayToTimePick(BaseFilter):
 
 
 class StartToEndTimePick(BaseFilter):
-    def filter(self, message):
-        return resolve_stance_for_callback(message, datacore.consts.DAY_PICKED)
+    def filter(self, callback_query):
+        return datacore.data_as_json(callback_query.data).type == datacore.consts.START_TIME_PICKED and resolve_stance_for_callback(callback_query, datacore.consts.DAY_PICKED)
 
 
 class MonthToDayPick(BaseFilter):
     def filter(self, callback_query):
-        return resolve_stance_for_callback(callback_query, datacore.consts.NOTHING_PICKED)
+        return datacore.data_as_json(callback_query.data).type == datacore.consts.MONTH_PICKED and resolve_stance_for_callback(callback_query, datacore.consts.NOTHING_PICKED)
 
 
 class EndTimeToCommitPick(BaseFilter):
     def filter(self, callback_query):
-        return resolve_stance_for_callback(callback_query, datacore.consts.START_TIME_PICKED)
+        return datacore.data_as_json(callback_query.data).type == datacore.consts.END_TIME_PICKED and resolve_stance_for_callback(callback_query, datacore.consts.START_TIME_PICKED)
 
 
 def resolve_stance(message, stance) -> bool:

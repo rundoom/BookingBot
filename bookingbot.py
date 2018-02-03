@@ -20,7 +20,8 @@ def book(bot, update):
     month_keys = [[InlineKeyboardButton(text=x.month_name,
                                         callback_data=CallData(
                                             call_type=consts.MONTH_PICKED,
-                                            call_val=x.month_number)
+                                            call_val=x.month_number,
+                                            opt_payload=x.year)
                                         .to_json())] for x in next_few]
 
     bot.send_message(chat_id=update.message.chat_id, text="На какой месяц?",
@@ -41,10 +42,10 @@ def start_to_end_time_pick(bot, update):
     query = update.callback_query
     username = query.message.chat_id
     bot.send_message(chat_id=username,
-                     text=f"Время начала: {data_as_json(query.data).call_val}")
+                     text=f"Время начала: {data_as_json(query.data).val}")
 
     repository.update_stance(stance=consts.START_TIME_PICKED, user=username)
-    repository.update_data(user=username, data=CallData(call_type=consts.START_TIME_PICKED, call_val=data_as_json(query.data).call_val))
+    repository.update_data(user=username, data=CallData(call_type=consts.START_TIME_PICKED, call_val=data_as_json(query.data).val))
 
     possible_start = dateutil.possible_time_for_end(username)
 
@@ -85,7 +86,7 @@ def day_to_time_pick(bot, update):
 def month_to_day_pick(bot, update):
     query = update.callback_query
 
-    bot.send_message(text=f"Выбран {dateutil.month_map[data_as_json(query.data).call_val]}",
+    bot.send_message(text=f"Выбран {dateutil.month_map[data_as_json(query.data).val]}",
                      chat_id=query.message.chat_id,
                      message_id=query.message.message_id)
 
@@ -96,20 +97,24 @@ def month_to_day_pick(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
 
-    repository.update_stance(stance=data_as_json(query.data).call_type,
+    repository.update_stance(stance=data_as_json(query.data).type,
                              user=query.message.chat_id)
 
-    repository.update_data(user=query.message.chat_id, data=data_as_json(query.data))
+    repository.update_data(user=query.message.chat_id, data=data_as_json(query.data), custom_type=consts.YEAR_PICKED)
 
 
 def end_time_to_commit_pick(bot, update):
     query = update.callback_query
     username = query.message.chat_id
+    user_data = repository.user_data[username]
     bot.send_message(chat_id=username,
-                     text=f"Время Окончания: {data_as_json(query.data).call_val}")
+                     text=f"Выбрано время:\n{user_data[consts.DAY_PICKED]}"
+                          f" {dateutil.morph_month_name(dateutil.month_map[user_data[consts.MONTH_PICKED]])}"
+                          f" от {user_data[consts.START_TIME_PICKED]}"
+                          f" до {data_as_json(query.data).val}")
 
     repository.update_stance(stance=consts.END_TIME_PICKED, user=username)
-    repository.update_data(user=username, data=CallData(call_type=consts.END_TIME_PICKED, call_val=data_as_json(query.data).call_val))
+    repository.update_data(user=username, data=CallData(call_type=consts.END_TIME_PICKED, call_val=data_as_json(query.data).val))
 
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
