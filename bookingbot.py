@@ -1,0 +1,143 @@
+import datetime
+import logging
+from calendar import monthrange
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import (TimedOut, NetworkError)
+
+import dateutil
+import filters
+from datacore import *
+from dispatcher import *
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+
+
+def book(bot, update):
+    next_few = dateutil.get_next_few_months()
+    month_keys = [[InlineKeyboardButton(text=x.month_name,
+                                        callback_data=CallData(
+                                            call_type=consts.MONTH_PICKED,
+                                            call_val=x.month_number)
+                                        .to_json())] for x in next_few]
+
+    bot.send_message(chat_id=update.message.chat_id, text="На какой месяц?",
+                     reply_markup=InlineKeyboardMarkup(inline_keyboard=month_keys))
+
+    repository.update_stance(user=update.message.chat_id, stance=consts.NOTHING_PICKED)
+
+
+def echo(bot, update):
+    username = update.message.chat_id
+    text = update.message.text
+    bot.send_message(chat_id=update.message.chat_id, text=f"Введите /book для того чтобы назначить время")
+
+    logging.info(text)
+    logging.info(username)
+
+
+def start(bot, update):
+    echo(bot, update)
+
+
+def start_to_end_time_pick(bot, update):
+    username = update.message.chat_id
+    text = update.message.text
+    bot.send_message(chat_id=update.message.chat_id,
+                     text=f"В этот день свободны: ")
+
+    possible_time = dateutil.possible_time()
+
+    time_keys = [[InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.START_TIME_PICKED, call_val=x).to_json())] for x in possible_time]
+
+    bot.send_message(chat_id=update.message.chat_id, text="На какое время?",
+                     reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
+
+    logging.info(text)
+    logging.info(username)
+
+
+def time_pick(bot, update):
+    query = update.callback_query
+    logging.info(query.data)
+
+
+def day_to_time_pick(bot, update):
+    username = update.message.chat_id
+    text = update.message.text
+    picked_month = repository.user_data[username][consts.MONTH_PICKED]
+    current_date = datetime.now()
+    if dateutil.is_days_count_fits(text, repository.user_data[username][consts.MONTH_PICKED]):
+
+        bot.send_message(chat_id=update.message.chat_id,
+                         text=f"В этот день свободны: ")
+
+        time_keys = [[InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.START_TIME_PICKED, call_val=x).to_json()) for x in dateutil.possible_time()][x:x + 4] for x in range(0, len(dateutil.possible_time()), 4)]
+
+        bot.send_message(chat_id=update.message.chat_id, text="Время начала: ",
+                         reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
+
+        repository.update_stance(stance=consts.DAY_PICKED, user=username)
+        repository.update_data(user=username, data=CallData(call_type=consts.DAY_PICKED, call_val=text))
+
+    else:
+        bot.send_message(chat_id=update.message.chat_id,
+                         text=f"Допустимые значения: {dateutil.available_from_to(picked_month)[0]} - {monthrange(year=current_date.year, month=current_date.month)[1]}")
+
+    logging.info(text)
+    logging.info(username)
+
+
+def month_to_day_pick(bot, update):
+    query = update.callback_query
+    logging.info(query.data)
+
+    bot.send_message(text=f"Выбран {dateutil.month_map[data_as_json(query.data).call_val]}",
+                     chat_id=query.message.chat_id,
+                     message_id=query.message.message_id)
+
+    bot.send_message(text="Выберите день:",
+                     chat_id=query.message.chat_id,
+                     message_id=query.message.message_id)
+
+    bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
+                      message_id=update.callback_query.message.message_id)
+
+    repository.update_stance(stance=data_as_json(query.data).call_type,
+                             user=query.message.chat_id)
+
+    repository.update_data(user=query.message.chat_id, data=data_as_json(query.data))
+
+
+def unresolved_pick(bot, update):
+    bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
+                      message_id=update.callback_query.message.message_id)
+
+
+dispatcher_handlers = [
+    CommandHandler('start', start),
+    CommandHandler('book', book),
+    MessageHandler(Filters.text & filters.filter_day_to_time_pick, day_to_time_pick),
+    MessageHandler(Filters.text & filters.filter_start_to_end_time_pick, start_to_end_time_pick),
+    MessageHandler(Filters.text, echo),
+    FilteredCallbackQueryHandler(filters=filters.filter_month_to_day_pick, callback=month_to_day_pick),
+    FilteredCallbackQueryHandler(filters=filters.filter_time_pick, callback=time_pick),
+    CallbackQueryHandler(callback=unresolved_pick)
+]
+
+for x in dispatcher_handlers:
+    dispatcher.add_handler(x)
+
+updater.start_polling()
+
+
+def error_callback(bot, update, error):
+    try:
+        raise error
+    except (TimedOut, NetworkError):
+        logging.info("Network error occurred, start polling again")
+        updater.start_polling()
+
+
+dispatcher.add_error_handler(error_callback)
