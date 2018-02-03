@@ -1,5 +1,6 @@
 import datetime
 from calendar import monthrange
+import datacore
 
 month_map = {1: "Январь", 2: "Февраль",
              3: "Март", 4: "Апрель", 5: "Май",
@@ -43,3 +44,9 @@ def available_from_to(msg: str):
 
 def possible_time() -> list:
     return [f"{str(x)}:00" for x in range(7, 22)]
+
+
+def possible_time_for_end(user: str) -> list:
+    start_time = datacore.repository.user_data[user][datacore.consts.START_TIME_PICKED]
+    possible_end = [f"{str(x)}:00" for x in range(7, 22)]
+    return possible_end[list.index(possible_end, start_time)+1:]

@@ -43,6 +43,13 @@ class Repository:
         self.user_stances = {}
         self.user_data = {}
 
+    def purge_user(self, user):
+        if user in self.user_stances:
+            del self.user_stances[user]
+
+        if user in self.user_data:
+            del self.user_data[user]
+
     def update_stance(self, stance: str, user: str):
         logging.info(f"user: {user} in {stance}")
         self.user_stances[user] = stance

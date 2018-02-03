@@ -15,6 +15,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 
 def book(bot, update):
+    repository.purge_user(update.message.chat_id)
     next_few = dateutil.get_next_few_months()
     month_keys = [[InlineKeyboardButton(text=x.month_name,
                                         callback_data=CallData(
@@ -42,12 +43,17 @@ def start_to_end_time_pick(bot, update):
     bot.send_message(chat_id=username,
                      text=f"Время начала: {data_as_json(query.data).call_val}")
 
-    time_keys = [
-        [InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.END_TIME_PICKED, call_val=x).to_json())
-         for x in dateutil.possible_time()][x:x + 4] for x in range(0, len(dateutil.possible_time()), 4)]
-
     repository.update_stance(stance=consts.START_TIME_PICKED, user=username)
     repository.update_data(user=username, data=CallData(call_type=consts.START_TIME_PICKED, call_val=data_as_json(query.data).call_val))
+
+    possible_start = dateutil.possible_time_for_end(username)
+
+    time_keys = [
+        [InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.END_TIME_PICKED, call_val=x).to_json())
+         for x in possible_start][x:x + 4] for x in range(0, len(possible_start), 4)]
+
+    bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
+                      message_id=update.callback_query.message.message_id)
 
     bot.send_message(chat_id=username, text="До какого времени?",
                      reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
@@ -96,6 +102,19 @@ def month_to_day_pick(bot, update):
     repository.update_data(user=query.message.chat_id, data=data_as_json(query.data))
 
 
+def end_time_to_commit_pick(bot, update):
+    query = update.callback_query
+    username = query.message.chat_id
+    bot.send_message(chat_id=username,
+                     text=f"Время Окончания: {data_as_json(query.data).call_val}")
+
+    repository.update_stance(stance=consts.END_TIME_PICKED, user=username)
+    repository.update_data(user=username, data=CallData(call_type=consts.END_TIME_PICKED, call_val=data_as_json(query.data).call_val))
+
+    bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
+                      message_id=update.callback_query.message.message_id)
+
+
 def unresolved_pick(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
@@ -108,6 +127,7 @@ dispatcher_handlers = [
     MessageHandler(Filters.text, echo),
     FilteredCallbackQueryHandler(filters=filters.filter_month_to_day_pick, callback=month_to_day_pick),
     FilteredCallbackQueryHandler(filters=filters.filter_start_to_end_time_pick, callback=start_to_end_time_pick),
+    FilteredCallbackQueryHandler(filters=filters.filter_end_time_to_commit_pick, callback=end_time_to_commit_pick),
     CallbackQueryHandler(callback=unresolved_pick)
 ]
 
