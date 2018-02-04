@@ -69,6 +69,7 @@ class Repository:
 
         booked_range = BookedRange(start_date=start_date, end_date=end_date, username=user)
         self.booked.append(booked_range)
+        self.purge_user(user)
         print(self.booked)
 
     def update_stance(self, stance: str, user: str):
