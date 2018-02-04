@@ -1,7 +1,12 @@
-import re
+def a() -> bool:
+    print("a")
+    return False
 
 
-a = ["17:00", "9:00"]
+def b() -> bool:
+    print("b")
+    return True
 
-for x in a:
-    print(re.search("\d+(?=:)", x).group(0))
+
+if a() and b():
+    pass

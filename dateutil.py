@@ -47,14 +47,49 @@ def available_from_to(msg: str):
         return 1, monthrange(year=current.year, month=current.month)[1]
 
 
-def possible_time() -> list:
-    return [f"{str(x)}:00" for x in range(7, 22)]
+def possible_time(user: str) -> list:
+    user_data = datacore.repository.user_data[user]
+    cns = datacore.consts
+    current_date = datetime.datetime.now()
+    busy = datacore.repository.get_busy_on_date(year=user_data[cns.YEAR_PICKED], day=user_data[cns.DAY_PICKED],
+                                                month=user_data[cns.MONTH_PICKED])
+
+    possible_start = 7
+    if current_date.year == user_data[cns.YEAR_PICKED] and current_date.month == user_data[cns.MONTH_PICKED] and current_date.day == user_data[cns.DAY_PICKED]:
+        if current_date.hour > 7:
+            possible_start = current_date.hour + 1
+
+    all_aval = set(range(possible_start, 22))
+
+    for x in busy:
+        all_aval -= set(range(x[0], x[1]))
+
+    return [f"{str(x)}:00" for x in list(all_aval)]
 
 
 def possible_time_for_end(user: str) -> list:
+    user_data = datacore.repository.user_data[user]
+    cns = datacore.consts
+
+    busy = datacore.repository.get_busy_on_date(year=user_data[cns.YEAR_PICKED], day=user_data[cns.DAY_PICKED],
+                                                month=user_data[cns.MONTH_PICKED])
+
+    all_aval = set(range(7, 23))
+    for x in busy:
+        all_aval -= set(range(x[0]+1, x[1]))
+
+    all_aval = trim_to_border(list(all_aval))
+
     start_time = datacore.repository.user_data[user][datacore.consts.START_TIME_PICKED]
-    possible_end = [f"{str(x)}:00" for x in range(7, 23)]
+    possible_end = [f"{str(x)}:00" for x in all_aval]
     return possible_end[list.index(possible_end, start_time)+1:]
+
+
+def trim_to_border(c: list):
+    for x in range(0, len(c)):
+        if x+1 < len(c) and c[x+1] - c[x] > 1:
+            return c[:x+1]
+    return c
 
 
 def morph_month_name(name: str):

@@ -70,19 +70,18 @@ def day_to_time_pick(bot, update):
         bot.send_message(chat_id=update.message.chat_id,
                          text=f"В этот день свободны: ")
 
+        repository.update_stance(stance=consts.DAY_PICKED, user=username)
+        repository.update_data(user=username, data=CallData(call_type=consts.DAY_PICKED, call_val=int(text)))
+
         time_keys = [[InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.START_TIME_PICKED,
                                                                           call_val=x).to_json()) for x in
-                      dateutil.possible_time()][x:x + 6] for x in range(0, len(dateutil.possible_time()), 6)]
+                      dateutil.possible_time(username)][x:x + 6] for x in range(0, len(dateutil.possible_time(username)), 6)]
 
         bot.send_message(chat_id=update.message.chat_id, text="Время начала: ",
                          reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
-
-        repository.update_stance(stance=consts.DAY_PICKED, user=username)
-        repository.update_data(user=username, data=CallData(call_type=consts.DAY_PICKED, call_val=text))
-
     else:
         bot.send_message(chat_id=update.message.chat_id,
-                         text=f"Допустимые значения: {dateutil.available_from_to(picked_month)[0]} - {monthrange(year=current_date.year, month=current_date.month)[1]}")
+                         text=f"Допустимые значения: {dateutil.available_from_to(picked_month)[0]} - {monthrange(year=current_date.year, month=int(picked_month))[1]}")
 
 
 def month_to_day_pick(bot, update):

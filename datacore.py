@@ -2,6 +2,7 @@ import json
 import logging
 import re
 from _datetime import datetime
+from typing import Union
 
 
 class Consts:
@@ -32,7 +33,7 @@ class CurrentStance:
 
 
 class CallData:
-    def __init__(self, call_type: str, call_val: str, opt_payload=None):
+    def __init__(self, call_type: str, call_val: Union[str, int], opt_payload=None):
         self.type = call_type
         self.val = call_val
         self.load = opt_payload
@@ -73,6 +74,10 @@ class Repository:
     def update_stance(self, stance: str, user: str):
         logging.info(f"user: {user} in {stance}")
         self.user_stances[user] = stance
+
+    def get_busy_on_date(self, day, month, year):
+        on_day = list(filter(lambda x: x.start_date.day == int(day) and x.start_date.month == int(month) and x.start_date.year == int(year), self.booked))
+        return list(map(lambda x: [x.start_date.hour, x.end_date.hour], on_day))
 
     def update_data(self, data: CallData, user: str, custom_type: str = None):
         if user in self.user_data:
