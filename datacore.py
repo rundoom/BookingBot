@@ -1,6 +1,7 @@
 import json
-from _datetime import datetime
 import logging
+import re
+from _datetime import datetime
 
 
 class Consts:
@@ -11,6 +12,7 @@ class Consts:
         self.DAY_PICKED = "day_picked"
         self.START_TIME_PICKED = "start_time_picked"
         self.END_TIME_PICKED = "end_time_picked"
+        self.COMMITTED = "committed"
 
 
 consts = Consts()
@@ -52,10 +54,21 @@ class Repository:
 
         if user in self.user_data:
             del self.user_data[user]
-    #
-    # def book_range(self, user: str):
-    #     booked_range = BookedRange(start_date=)
-    #     self.booked.append()
+
+    def book_range(self, user: str):
+        sts = self.user_data[user]
+
+        start_date = datetime(year=int(sts[consts.YEAR_PICKED]), day=int(sts[consts.DAY_PICKED]),
+                              month=int(sts[consts.MONTH_PICKED]),
+                              hour=int(re.search("\d+(?=:)", sts[consts.START_TIME_PICKED]).group(0)))
+
+        end_date = datetime(year=int(sts[consts.YEAR_PICKED]), day=int(sts[consts.DAY_PICKED]),
+                            month=int(sts[consts.MONTH_PICKED]),
+                            hour=int(re.search("\d+(?=:)", sts[consts.END_TIME_PICKED]).group(0)))
+
+        booked_range = BookedRange(start_date=start_date, end_date=end_date, username=user)
+        self.booked.append(booked_range)
+        print(self.booked)
 
     def update_stance(self, stance: str, user: str):
         logging.info(f"user: {user} in {stance}")
@@ -70,14 +83,6 @@ class Repository:
 
         if custom_type is not None and data.load is not None:
             self.user_data[user][custom_type] = data.load
-        logging.info(f"user: {user} input data {self.user_data[user]}")
-
-    def update_custom(self, data: CallData, user: str, type: str):
-        if user in self.user_data:
-            self.user_data[user][type] = data.load
-        else:
-            user_inner = {type: data.load}
-            self.user_data[user] = user_inner
         logging.info(f"user: {user} input data {self.user_data[user]}")
 
 
