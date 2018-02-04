@@ -73,9 +73,11 @@ def day_to_time_pick(bot, update):
         repository.update_stance(stance=consts.DAY_PICKED, user=username)
         repository.update_data(user=username, data=CallData(call_type=consts.DAY_PICKED, call_val=int(text)))
 
+        possible_time = dateutil.possible_time(username)
+
         time_keys = [[InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.START_TIME_PICKED,
                                                                           call_val=x).to_json()) for x in
-                      dateutil.possible_time(username)][x:x + 6] for x in range(0, len(dateutil.possible_time(username)), 6)]
+                      possible_time][x:x + 6] for x in range(0, len(possible_time), 6)]
 
         bot.send_message(chat_id=update.message.chat_id, text="Время начала: ",
                          reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
