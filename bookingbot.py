@@ -12,6 +12,11 @@ from dispatcher import *
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
+adm = [#155247459,
+    153174359]
+
+time_rows = 5
+
 
 def book(bot, update):
     repository.purge_user(update.message.chat_id)
@@ -51,7 +56,7 @@ def start_to_end_time_pick(bot, update):
 
     time_keys = [
         [InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.END_TIME_PICKED, call_val=x).to_json())
-         for x in possible_start][x:x + 6] for x in range(0, len(possible_start), 6)]
+         for x in possible_start][x:x + time_rows] for x in range(0, len(possible_start), time_rows)]
 
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
@@ -70,14 +75,19 @@ def day_to_time_pick(bot, update):
         repository.update_stance(stance=consts.DAY_PICKED, user=username)
         repository.update_data(user=username, data=CallData(call_type=consts.DAY_PICKED, call_val=int(text)))
 
-        # bot.send_message(chat_id=update.message.chat_id,
-        #                  text=f"В этот день свободны: {dateutil.possible_time_for_start(username)}")
+        possible_time = None
 
-        possible_time = dateutil.possible_time_for_start(username)
+        try:
+            possible_time = dateutil.possible_time_for_start(username)
+        except dateutil.NoTimeAvailable:
+            repository.update_stance(stance=consts.MONTH_PICKED, user=username)
+            del repository.user_data[username][consts.DAY_PICKED]
+            bot.send_message(chat_id=update.message.chat_id, text="На этот день свободного времени нет\nВведите другую дату или /book для того чтобы начать заново")
+            return
 
         time_keys = [[InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.START_TIME_PICKED,
                                                                           call_val=x).to_json()) for x in
-                      possible_time][x:x + 6] for x in range(0, len(possible_time), 6)]
+                      possible_time][x:x + time_rows] for x in range(0, len(possible_time), time_rows)]
 
         bot.send_message(chat_id=update.message.chat_id, text="Время начала: ",
                          reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
@@ -93,7 +103,7 @@ def month_to_day_pick(bot, update):
                      chat_id=query.message.chat_id,
                      message_id=query.message.message_id)
 
-    bot.send_message(text="Выберите день:",
+    bot.send_message(text="Выберите число:",
                      chat_id=query.message.chat_id,
                      message_id=query.message.message_id)
 
@@ -140,6 +150,11 @@ def commit_pick(bot, update):
     if data_as_json(query.data).val == "True":
         repository.book_range(username)
         bot.send_message(chat_id=username, text=f"Заказ подтверждён")
+        for x in adm:
+            bot.send_message(chat_id=x, text=f"Заказ пользователем {query.from_user.name}\nНа дату:\n{user_data[consts.DAY_PICKED]}"
+                              f" {dateutil.morph_month_name(dateutil.month_map[user_data[consts.MONTH_PICKED]])}"
+                              f" от {user_data[consts.START_TIME_PICKED]}"
+                              f" до {user_data[consts.END_TIME_PICKED]}")
     else:
         repository.purge_user(username)
         bot.send_message(chat_id=username, text=f"Заказ отменён")

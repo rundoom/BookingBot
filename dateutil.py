@@ -68,6 +68,9 @@ def possible_time_for_start(user: str) -> list:
     for x in busy:
         all_aval -= set(range(x[0], x[1]))
 
+    if not all_aval:
+        raise NoTimeAvailable()
+
     return [f"{str(x)}:00" for x in list(all_aval)]
 
 
@@ -78,11 +81,14 @@ def possible_time_for_end(user: str) -> list:
     busy = datacore.repository.get_busy_on_date(year=user_data[cns.YEAR_PICKED], day=user_data[cns.DAY_PICKED],
                                                 month=user_data[cns.MONTH_PICKED])
 
+    start_int = int(re.search("\d+(?=:)", user_data[datacore.consts.START_TIME_PICKED]).group(0))
+
     all_aval = set(range(7, 23))
     for x in busy:
-        all_aval -= set(range(x[0]+1, x[1]+1))
+        busy_range = set(range(x[0]+1, x[1]+1)) - {start_int}
+        all_aval -= busy_range
 
-    all_aval = trim_to_border(list(all_aval), int(re.search("\d+(?=:)", user_data[datacore.consts.START_TIME_PICKED]).group(0)))
+    all_aval = trim_to_border(list(all_aval), start_int)
 
     start_time = datacore.repository.user_data[user][datacore.consts.START_TIME_PICKED]
     possible_end = [f"{str(x)}:00" for x in all_aval]
@@ -101,3 +107,8 @@ def morph_month_name(name: str):
         return re.sub("ь$", "я", name)
     else:
         return f"{name}а"
+
+
+class NoTimeAvailable(Exception):
+    def __init__(self):
+        pass
