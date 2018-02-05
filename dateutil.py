@@ -18,7 +18,7 @@ class MonthWithName:
 
 
 def get_next_month(current: int, increment: int = 0) -> MonthWithName:
-    current = current + increment
+    current += increment
     year_inc = current // 12
     next_month = current - year_inc * 12
     if next_month == 0:
@@ -80,7 +80,7 @@ def possible_time_for_end(user: str) -> list:
 
     all_aval = set(range(7, 23))
     for x in busy:
-        all_aval -= set(range(x[0]+1, x[1]))
+        all_aval -= set(range(x[0]+1, x[1]+1))
 
     all_aval = trim_to_border(list(all_aval), int(re.search("\d+(?=:)", user_data[datacore.consts.START_TIME_PICKED]).group(0)))
 
@@ -90,9 +90,9 @@ def possible_time_for_end(user: str) -> list:
 
 
 def trim_to_border(c: list, start: int):
-    for x in range(start, len(c)):
+    for x in range(list.index(c, start), len(c)):
         if x+1 < len(c) and c[x+1] - c[x] > 1:
-            return c[:x+1]
+            return c[list.index(c, start):x+1]
     return c
 
 

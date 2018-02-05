@@ -1,17 +1,13 @@
-a = list(range(1, 15))
-b = list(range(17, 25))
+a = list(range(7, 10))
+b = list(range(11, 13))
+c = list(range(15, 20))
 
 
-def trim_to_border(c: list):
-    for x in range(0, len(c)):
-        if c[x+1] - c[x] > 1:
-            return c[:x+1]
-
-
-def group_by_gaps(c: list):
-    list_to_return = []
-    for x in range(0, len(c)):
+def trim_to_border(c: list, start: int):
+    for x in range(list.index(c, start), len(c)):
         if x+1 < len(c) and c[x+1] - c[x] > 1:
-            return c[:x+1]
+            return c[list.index(c, start):x+1]
+    return c
 
-print(trim_to_border(a+b))
+print(a+b+c)
+print(trim_to_border(a+b+c, 16))

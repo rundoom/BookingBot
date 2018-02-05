@@ -70,8 +70,8 @@ def day_to_time_pick(bot, update):
         repository.update_stance(stance=consts.DAY_PICKED, user=username)
         repository.update_data(user=username, data=CallData(call_type=consts.DAY_PICKED, call_val=int(text)))
 
-        bot.send_message(chat_id=update.message.chat_id,
-                         text=f"В этот день свободны: {dateutil.possible_time_for_start(username)}")
+        # bot.send_message(chat_id=update.message.chat_id,
+        #                  text=f"В этот день свободны: {dateutil.possible_time_for_start(username)}")
 
         possible_time = dateutil.possible_time_for_start(username)
 
