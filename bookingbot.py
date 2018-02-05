@@ -12,7 +12,7 @@ from dispatcher import *
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
-adm = [#155247459,
+adm = [  # 155247459,
     153174359]
 
 time_rows = 5
@@ -82,7 +82,8 @@ def day_to_time_pick(bot, update):
         except dateutil.NoTimeAvailable:
             repository.update_stance(stance=consts.MONTH_PICKED, user=username)
             del repository.user_data[username][consts.DAY_PICKED]
-            bot.send_message(chat_id=update.message.chat_id, text="На этот день свободного времени нет\nВведите другую дату или /book для того чтобы начать заново")
+            bot.send_message(chat_id=update.message.chat_id,
+                             text="На этот день свободного времени нет\nВведите другую дату или /book для того чтобы начать заново")
             return
 
         time_keys = [[InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.START_TIME_PICKED,
@@ -123,7 +124,8 @@ def end_time_to_commit_pick(bot, update):
 
     commit_buttons = [
         [InlineKeyboardButton(text="Да", callback_data=CallData(call_type=consts.COMMITTED, call_val="True").to_json()),
-         InlineKeyboardButton(text="Нет", callback_data=CallData(call_type=consts.COMMITTED, call_val="False").to_json())]]
+         InlineKeyboardButton(text="Нет",
+                              callback_data=CallData(call_type=consts.COMMITTED, call_val="False").to_json())]]
 
     bot.send_message(chat_id=username,
                      text=f"Выбрано время:\n{user_data[consts.DAY_PICKED]}"
@@ -151,10 +153,11 @@ def commit_pick(bot, update):
         repository.book_range(username)
         bot.send_message(chat_id=username, text=f"Заказ подтверждён")
         for x in adm:
-            bot.send_message(chat_id=x, text=f"Заказ пользователем {query.from_user.name}\nНа дату:\n{user_data[consts.DAY_PICKED]}"
-                              f" {dateutil.morph_month_name(dateutil.month_map[user_data[consts.MONTH_PICKED]])}"
-                              f" от {user_data[consts.START_TIME_PICKED]}"
-                              f" до {user_data[consts.END_TIME_PICKED]}")
+            bot.send_message(chat_id=x,
+                             text=f"Заказ пользователем {query.from_user.name}\nНа дату:\n{user_data[consts.DAY_PICKED]}"
+                                  f" {dateutil.morph_month_name(dateutil.month_map[user_data[consts.MONTH_PICKED]])}"
+                                  f" от {user_data[consts.START_TIME_PICKED]}"
+                                  f" до {user_data[consts.END_TIME_PICKED]}")
     else:
         repository.purge_user(username)
         bot.send_message(chat_id=username, text=f"Заказ отменён")

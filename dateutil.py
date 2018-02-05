@@ -63,7 +63,7 @@ def possible_time_for_start(user: str) -> list:
         if current_date.hour > 7:
             possible_start = current_date.hour + 1
 
-    all_aval = set(range(possible_start, 22))
+    all_aval = set(range(possible_start, 23))
 
     for x in busy:
         all_aval -= set(range(x[0], x[1]))
@@ -83,7 +83,7 @@ def possible_time_for_end(user: str) -> list:
 
     start_int = int(re.search("\d+(?=:)", user_data[datacore.consts.START_TIME_PICKED]).group(0))
 
-    all_aval = set(range(7, 23))
+    all_aval = set(range(7, 24))
     for x in busy:
         busy_range = set(range(x[0]+1, x[1]+1)) - {start_int}
         all_aval -= busy_range
