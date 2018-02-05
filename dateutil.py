@@ -47,7 +47,11 @@ def available_from_to(msg: str):
         return 1, monthrange(year=current.year, month=current.month)[1]
 
 
-def possible_time(user: str) -> list:
+def calc_free_time(user: str):
+    possible_time_for_start(user)
+
+
+def possible_time_for_start(user: str) -> list:
     user_data = datacore.repository.user_data[user]
     cns = datacore.consts
     current_date = datetime.datetime.now()
@@ -78,15 +82,15 @@ def possible_time_for_end(user: str) -> list:
     for x in busy:
         all_aval -= set(range(x[0]+1, x[1]))
 
-    all_aval = trim_to_border(list(all_aval))
+    all_aval = trim_to_border(list(all_aval), int(re.search("\d+(?=:)", user_data[datacore.consts.START_TIME_PICKED]).group(0)))
 
     start_time = datacore.repository.user_data[user][datacore.consts.START_TIME_PICKED]
     possible_end = [f"{str(x)}:00" for x in all_aval]
     return possible_end[list.index(possible_end, start_time)+1:]
 
 
-def trim_to_border(c: list):
-    for x in range(0, len(c)):
+def trim_to_border(c: list, start: int):
+    for x in range(start, len(c)):
         if x+1 < len(c) and c[x+1] - c[x] > 1:
             return c[:x+1]
     return c

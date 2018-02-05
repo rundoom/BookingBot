@@ -67,13 +67,13 @@ def day_to_time_pick(bot, update):
     current_date = datetime.now()
     if dateutil.is_days_count_fits(text, repository.user_data[username][consts.MONTH_PICKED]):
 
-        bot.send_message(chat_id=update.message.chat_id,
-                         text=f"В этот день свободны: ")
-
         repository.update_stance(stance=consts.DAY_PICKED, user=username)
         repository.update_data(user=username, data=CallData(call_type=consts.DAY_PICKED, call_val=int(text)))
 
-        possible_time = dateutil.possible_time(username)
+        bot.send_message(chat_id=update.message.chat_id,
+                         text=f"В этот день свободны: {dateutil.possible_time_for_start(username)}")
+
+        possible_time = dateutil.possible_time_for_start(username)
 
         time_keys = [[InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.START_TIME_PICKED,
                                                                           call_val=x).to_json()) for x in
