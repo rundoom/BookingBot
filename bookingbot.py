@@ -165,7 +165,7 @@ def phone_to_external_name_pick(bot, update):
     if not re.match("^\+?[\d\s-]{11,}$", update.message.text):
         bot.send_message(chat_id=username, text="Номер телефона некорректен, введите снова")
         return
-    repository.update_data(user=username, data=CallData(call_type=consts.PHONE_PICKED, call_val=update.message.text))
+    repository.update_data(user=username, data=CallData(call_type=consts.PHONE_PICKED, call_val=re.sub(pattern="[\s-]", repl="", string=re.sub(pattern="^8", repl="+7", string=update.message.text))))
     repository.update_stance(stance=consts.PHONE_PICKED, user=update.message.chat_id)
 
     bot.send_message(chat_id=username, text="Введите имя коллектива")
