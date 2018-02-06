@@ -13,6 +13,8 @@ class Consts:
         self.DAY_PICKED = "day_picked"
         self.START_TIME_PICKED = "start_time_picked"
         self.END_TIME_PICKED = "end_time_picked"
+        self.PHONE_PICKED = "phone_picked"
+        self.EXTERNAL_NAME_PICKED = "external_name_picked"
         self.COMMITTED = "committed"
 
 
@@ -51,6 +53,7 @@ class Repository:
         self.user_stances = {}
         self.user_data = {}
         self.booked = []
+        self.user_info = {}
 
     def purge_user(self, user):
         if user in self.user_stances:
@@ -72,6 +75,7 @@ class Repository:
 
         booked_range = BookedRange(start_date=start_date, end_date=end_date, username=user)
         self.booked.append(booked_range)
+        self.register_user(user)
         self.purge_user(user)
         print(booked_range)
 
@@ -93,6 +97,17 @@ class Repository:
         if custom_type is not None and data.load is not None:
             self.user_data[user][custom_type] = data.load
         logging.info(f"user: {user} input data {self.user_data[user]}")
+
+    def register_user(self, user: str):
+        if user not in self.user_info:
+            user_inner = {consts.PHONE_PICKED: self.user_data[user][consts.PHONE_PICKED], consts.EXTERNAL_NAME_PICKED: self.user_data[user][consts.EXTERNAL_NAME_PICKED]}
+            self.user_info[user] = user_inner
+
+    def get_booked(self):
+        return self.booked
+
+    def get_user_info(self, user):
+        return self.user_info[user]
 
 
 repository = Repository()

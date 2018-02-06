@@ -1,5 +1,6 @@
 import datetime
 from calendar import monthrange
+from functools import reduce
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import (TimedOut, NetworkError)
@@ -32,6 +33,12 @@ def book(bot, update):
                      reply_markup=InlineKeyboardMarkup(inline_keyboard=month_keys))
 
     repository.update_stance(user=update.message.chat_id, stance=consts.NOTHING_PICKED)
+
+
+def stats(bot, update):
+    all = reduce(lambda x, y: x+str(y)+"\n", repository.get_booked(), "")
+
+    bot.send_message(chat_id=update.message.chat_id, text=all)
 
 
 def echo(bot, update):
@@ -122,19 +129,11 @@ def end_time_to_commit_pick(bot, update):
     username = query.message.chat_id
     user_data = repository.user_data[username]
 
-    commit_buttons = [
-        [InlineKeyboardButton(text="Да", callback_data=CallData(call_type=consts.COMMITTED, call_val="True").to_json()),
-         InlineKeyboardButton(text="Нет",
-                              callback_data=CallData(call_type=consts.COMMITTED, call_val="False").to_json())]]
-
     bot.send_message(chat_id=username,
                      text=f"Выбрано время:\n{user_data[consts.DAY_PICKED]}"
                           f" {dateutil.morph_month_name(dateutil.month_map[user_data[consts.MONTH_PICKED]])}"
                           f" от {user_data[consts.START_TIME_PICKED]}"
                           f" до {data_as_json(query.data).val}")
-
-    bot.send_message(chat_id=username,
-                     text=f"Подтверждаете выбор?", reply_markup=InlineKeyboardMarkup(inline_keyboard=commit_buttons))
 
     repository.update_stance(stance=consts.END_TIME_PICKED, user=username)
     repository.update_data(user=username,
@@ -142,6 +141,42 @@ def end_time_to_commit_pick(bot, update):
 
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
+
+    if username in repository.user_info:
+        print_commit(bot, username)
+    else:
+        bot.send_message(chat_id=username,
+                         text=f"Введите контактный номер телефона")
+
+
+def print_commit(bot, username):
+    commit_buttons = [
+        [InlineKeyboardButton(text="Да",
+                              callback_data=CallData(call_type=consts.COMMITTED, call_val="True").to_json()),
+         InlineKeyboardButton(text="Нет",
+                              callback_data=CallData(call_type=consts.COMMITTED, call_val="False").to_json())]]
+
+    bot.send_message(chat_id=username,
+                     text=f"Подтверждаете выбор?", reply_markup=InlineKeyboardMarkup(inline_keyboard=commit_buttons))
+
+
+def phone_to_external_name_pick(bot, update):
+    username = update.message.chat_id
+    if not re.match("^\+?[\d\s-]{11,}$", update.message.text):
+        bot.send_message(chat_id=username, text="Номер телефона некорректен, введите снова")
+        return
+    repository.update_data(user=username, data=CallData(call_type=consts.PHONE_PICKED, call_val=update.message.text))
+    repository.update_stance(stance=consts.PHONE_PICKED, user=update.message.chat_id)
+
+    bot.send_message(chat_id=username, text="Введите имя коллектива")
+
+
+def external_name_to_commit_pick(bot, update):
+    username = update.message.chat_id
+    repository.update_data(user=username, data=CallData(call_type=consts.EXTERNAL_NAME_PICKED, call_val=update.message.text))
+    repository.update_stance(stance=consts.EXTERNAL_NAME_PICKED, user=update.message.chat_id)
+
+    print_commit(bot, username)
 
 
 def commit_pick(bot, update):
@@ -152,9 +187,10 @@ def commit_pick(bot, update):
     if data_as_json(query.data).val == "True":
         repository.book_range(username)
         bot.send_message(chat_id=username, text=f"Заказ подтверждён")
+        user_info = repository.get_user_info(username)
         for x in adm:
             bot.send_message(chat_id=x,
-                             text=f"Заказ пользователем {query.from_user.name}\nНа дату:\n{user_data[consts.DAY_PICKED]}"
+                             text=f"Заказ пользователем {query.from_user.name}\nКонтактный телефон:\n{user_info[consts.PHONE_PICKED]}\nКоллектив:\n{user_info[consts.EXTERNAL_NAME_PICKED]}\nНа дату:\n{user_data[consts.DAY_PICKED]}"
                                   f" {dateutil.morph_month_name(dateutil.month_map[user_data[consts.MONTH_PICKED]])}"
                                   f" от {user_data[consts.START_TIME_PICKED]}"
                                   f" до {user_data[consts.END_TIME_PICKED]}")
@@ -174,7 +210,10 @@ def unresolved_pick(bot, update):
 dispatcher_handlers = [
     CommandHandler('start', start),
     CommandHandler('book', book),
+    CommandHandler('stats', stats),
     MessageHandler(Filters.text & filters.filter_day_to_time_pick, day_to_time_pick),
+    MessageHandler(Filters.text & filters.filter_external_name_to_commit_pick, external_name_to_commit_pick),
+    MessageHandler(Filters.text & filters.filter_phone_to_external_name_pick, phone_to_external_name_pick),
     MessageHandler(Filters.text, echo),
     FilteredCallbackQueryHandler(filters=filters.filter_month_to_day_pick, callback=month_to_day_pick),
     FilteredCallbackQueryHandler(filters=filters.filter_start_to_end_time_pick, callback=start_to_end_time_pick),

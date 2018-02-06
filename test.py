@@ -1,18 +1,22 @@
-import time
+from threading import Thread
+from time import sleep
 
-class a:
-    def __init__(self):
-        time.sleep(2)
-        self.io = 5
-        self.oiu = "dwwd"
 
-    def __str__(self):
-        return "124454"
+def threaded_function(arg):
+    for i in range(arg):
+        print(f"running {i}")
+        sleep(1)
 
-b = a()
-a()
-a()
-a()
-a()
-a()
-print(b.__dict__)
+
+def threaded_function1(arg):
+    for i in range(arg):
+        print(f"executing {i}")
+        sleep(1)
+
+
+if __name__ == "__main__":
+    thread1 = Thread(target=threaded_function, args=(10,))
+    thread2 = Thread(target=threaded_function1, args=(2,))
+    thread1.start()
+    thread2.start()
+    pass
