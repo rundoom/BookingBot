@@ -186,7 +186,7 @@ dispatcher_handlers = [
 for x in dispatcher_handlers:
     dispatcher.add_handler(x)
 
-updater.start_polling()
+updater.start_polling(read_latency=10, bootstrap_retries=5)
 
 
 def error_callback(bot, update, error):

@@ -25,6 +25,9 @@ class BookedRange:
         self.end_date = end_date
         self.username = username
 
+    def __str__(self):
+        return str(self.__dict__)
+
 
 class CurrentStance:
     def __init__(self, stance: str, val: str):
@@ -70,7 +73,7 @@ class Repository:
         booked_range = BookedRange(start_date=start_date, end_date=end_date, username=user)
         self.booked.append(booked_range)
         self.purge_user(user)
-        print(self.booked)
+        print(booked_range)
 
     def update_stance(self, stance: str, user: str):
         logging.info(f"user: {user} in {stance}")
