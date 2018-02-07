@@ -3,32 +3,6 @@ from telegram.ext import BaseFilter
 import datacore
 
 
-class DayToTimePick(BaseFilter):
-    def filter(self, message):
-        return resolve_stance(message, datacore.consts.MONTH_PICKED)
-
-
-class StartToEndTimePick(BaseFilter):
-    def filter(self, callback_query):
-        return datacore.data_as_json(
-            callback_query.data).type == datacore.consts.START_TIME_PICKED and resolve_stance_for_callback(
-            callback_query, datacore.consts.DAY_PICKED)
-
-
-class MonthToDayPick(BaseFilter):
-    def filter(self, callback_query):
-        return datacore.data_as_json(
-            callback_query.data).type == datacore.consts.MONTH_PICKED and resolve_stance_for_callback(callback_query,
-                                                                                                      datacore.consts.NOTHING_PICKED)
-
-
-class EndTimeToCommitPick(BaseFilter):
-    def filter(self, callback_query):
-        return datacore.data_as_json(
-            callback_query.data).type == datacore.consts.END_TIME_PICKED and resolve_stance_for_callback(callback_query,
-                                                                                                         datacore.consts.START_TIME_PICKED)
-
-
 class CommitPick(BaseFilter):
     def filter(self, callback_query):
         return datacore.data_as_json(
@@ -37,14 +11,23 @@ class CommitPick(BaseFilter):
                                                                                                    datacore.consts.EXTERNAL_NAME_PICKED))))
 
 
-class PhoneToExternalNamePick(BaseFilter):
-    def filter(self, message):
-        return resolve_stance(message, datacore.consts.END_TIME_PICKED) and message.chat_id not in datacore.repository.user_info
+class StanceResolveFilterCallback(BaseFilter):
+    def __init__(self, callback_stance, user_stance):
+        self.callback_stance = callback_stance
+        self.user_stance = user_stance
+
+    def filter(self, callback_query):
+        return datacore.data_as_json(
+            callback_query.data).type == self.callback_stance and resolve_stance_for_callback(callback_query, self.user_stance)
 
 
-class ExternalNameToCommitPick(BaseFilter):
+class StanceResolveFilter(BaseFilter):
+    def __init__(self, stance, check_info: bool):
+        self.stance = stance
+        self.check_info = check_info
+
     def filter(self, message):
-        return resolve_stance(message, datacore.consts.PHONE_PICKED) and message.chat_id not in datacore.repository.user_info
+        return resolve_stance(message, self.stance) and (not self.check_info or message.chat_id not in datacore.repository.user_info)
 
 
 def resolve_stance(message, stance) -> bool:
@@ -57,10 +40,4 @@ def resolve_stance_for_callback(callback, stance) -> bool:
     return username in datacore.repository.user_stances and datacore.repository.user_stances[username] == stance
 
 
-filter_day_to_time_pick = DayToTimePick()
-filter_start_to_end_time_pick = StartToEndTimePick()
-filter_month_to_day_pick = MonthToDayPick()
-filter_end_time_to_commit_pick = EndTimeToCommitPick()
 filter_committed = CommitPick()
-filter_phone_to_external_name_pick = PhoneToExternalNamePick()
-filter_external_name_to_commit_pick = ExternalNameToCommitPick()

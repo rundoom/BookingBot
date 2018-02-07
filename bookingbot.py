@@ -36,7 +36,7 @@ def book(bot, update):
 
 
 def stats(bot, update):
-    all = reduce(lambda x, y: x+str(y)+"\n", repository.get_booked(), "")
+    all = "".join(repository.get_booked())
 
     bot.send_message(chat_id=update.message.chat_id, text=all)
 
@@ -210,14 +210,14 @@ def unresolved_pick(bot, update):
 dispatcher_handlers = [
     CommandHandler('start', start),
     CommandHandler('book', book),
-    CommandHandler('stats', stats),
-    MessageHandler(Filters.text & filters.filter_day_to_time_pick, day_to_time_pick),
-    MessageHandler(Filters.text & filters.filter_external_name_to_commit_pick, external_name_to_commit_pick),
-    MessageHandler(Filters.text & filters.filter_phone_to_external_name_pick, phone_to_external_name_pick),
+    CommandHandler(filters=Filters.user(user_id=adm), command='stats', callback=stats),
+    MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.MONTH_PICKED, check_info=False), day_to_time_pick),
+    MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.PHONE_PICKED, check_info=True), external_name_to_commit_pick),
+    MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.END_TIME_PICKED, check_info=True), phone_to_external_name_pick),
     MessageHandler(Filters.text, echo),
-    FilteredCallbackQueryHandler(filters=filters.filter_month_to_day_pick, callback=month_to_day_pick),
-    FilteredCallbackQueryHandler(filters=filters.filter_start_to_end_time_pick, callback=start_to_end_time_pick),
-    FilteredCallbackQueryHandler(filters=filters.filter_end_time_to_commit_pick, callback=end_time_to_commit_pick),
+    FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.MONTH_PICKED, user_stance=consts.NOTHING_PICKED), callback=month_to_day_pick),
+    FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.START_TIME_PICKED, user_stance=consts.DAY_PICKED), callback=start_to_end_time_pick),
+    FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.END_TIME_PICKED, user_stance=consts.START_TIME_PICKED), callback=end_time_to_commit_pick),
     FilteredCallbackQueryHandler(filters=filters.filter_committed, callback=commit_pick),
     CallbackQueryHandler(callback=unresolved_pick)
 ]
