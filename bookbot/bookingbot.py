@@ -1,7 +1,7 @@
 import datetime
 from calendar import monthrange
 
-import dateutil
+import dateutilbot
 import filters
 from dispatcher import *
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -67,7 +67,7 @@ time_rows = 5
 
 def book(bot, update):
     repository.purge_user(update.message.chat_id)
-    next_few = dateutil.get_next_few_months()
+    next_few = dateutilbot.get_next_few_months()
     month_keys = [[InlineKeyboardButton(text=x.month_name,
                                         callback_data=CallData(
                                             call_type=consts.MONTH_PICKED,
@@ -105,7 +105,7 @@ def start_to_end_time_pick(bot, update):
     repository.update_data(user=username,
                            data=CallData(call_type=consts.START_TIME_PICKED, call_val=data_as_json(query.data).val))
 
-    possible_start = dateutil.possible_time_for_end(username)
+    possible_start = dateutilbot.possible_time_for_end(username)
 
     time_keys = [
         [InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.END_TIME_PICKED, call_val=x).to_json())
@@ -123,7 +123,7 @@ def day_to_time_pick(bot, update):
     text = update.message.text
     picked_month = repository.user_data[username][consts.MONTH_PICKED]
     current_date = datetime.now()
-    if dateutil.is_days_count_fits(text, repository.user_data[username][consts.MONTH_PICKED]):
+    if dateutilbot.is_days_count_fits(text, repository.user_data[username][consts.MONTH_PICKED]):
 
         repository.update_stance(stance=consts.DAY_PICKED, user=username)
         repository.update_data(user=username, data=CallData(call_type=consts.DAY_PICKED, call_val=int(text)))
@@ -131,8 +131,8 @@ def day_to_time_pick(bot, update):
         possible_time = None
 
         try:
-            possible_time = dateutil.possible_time_for_start(username)
-        except dateutil.NoTimeAvailable:
+            possible_time = dateutilbot.possible_time_for_start(username)
+        except dateutilbot.NoTimeAvailable:
             repository.update_stance(stance=consts.MONTH_PICKED, user=username)
             del repository.user_data[username][consts.DAY_PICKED]
             bot.send_message(chat_id=update.message.chat_id,
@@ -147,13 +147,13 @@ def day_to_time_pick(bot, update):
                          reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
     else:
         bot.send_message(chat_id=update.message.chat_id,
-                         text=f"Допустимые значения: {dateutil.available_from_to(picked_month)[0]} - {monthrange(year=current_date.year, month=int(picked_month))[1]}")
+                         text=f"Допустимые значения: {dateutilbot.available_from_to(picked_month)[0]} - {monthrange(year=current_date.year, month=int(picked_month))[1]}")
 
 
 def month_to_day_pick(bot, update):
     query = update.callback_query
 
-    bot.send_message(text=f"Выбран {dateutil.month_map[data_as_json(query.data).val]}",
+    bot.send_message(text=f"Выбран {dateutilbot.month_map[data_as_json(query.data).val]}",
                      chat_id=query.message.chat_id,
                      message_id=query.message.message_id)
 
@@ -177,7 +177,7 @@ def end_time_to_commit_pick(bot, update):
 
     bot.send_message(chat_id=username,
                      text=f"Выбрано время:\n{user_data[consts.DAY_PICKED]}"
-                          f" {dateutil.morph_month_name(dateutil.month_map[user_data[consts.MONTH_PICKED]])}"
+                          f" {dateutilbot.morph_month_name(dateutilbot.month_map[user_data[consts.MONTH_PICKED]])}"
                           f" от {user_data[consts.START_TIME_PICKED]}"
                           f" до {data_as_json(query.data).val}")
 
@@ -237,7 +237,7 @@ def commit_pick(bot, update):
         for x in adm:
             bot.send_message(chat_id=x,
                              text=f"Заказ пользователем {query.from_user.name}\nКонтактный телефон:\n{user_info[consts.PHONE_PICKED]}\nКоллектив:\n{user_info[consts.EXTERNAL_NAME_PICKED]}\nНа дату:\n{user_data[consts.DAY_PICKED]}"
-                                  f" {dateutil.morph_month_name(dateutil.month_map[user_data[consts.MONTH_PICKED]])}"
+                                  f" {dateutilbot.morph_month_name(dateutilbot.month_map[user_data[consts.MONTH_PICKED]])}"
                                   f" от {user_data[consts.START_TIME_PICKED]}"
                                   f" до {user_data[consts.END_TIME_PICKED]}")
     else:

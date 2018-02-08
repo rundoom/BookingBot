@@ -1,6 +1,6 @@
 from telegram.ext import BaseFilter
 
-from bookbot import datacore
+import datacore
 
 
 class CommitPick(BaseFilter):
