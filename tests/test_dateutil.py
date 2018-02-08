@@ -10,10 +10,10 @@ from telegram import Message
 from telegram import Update
 from telegram import User
 
-import bookingbot
-import datacore
-import dateutilbot
-from datacore import CallData
+from bookbot import bookingbot
+from bookbot import datacore
+from bookbot import dateutilbot
+from bookbot.datacore import CallData
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -54,7 +54,6 @@ class BotTest(TestCase):
 
         global acc
         acc = Accumulator()
-
 
     def setUp(self):
         acc.current_method = self._testMethodName

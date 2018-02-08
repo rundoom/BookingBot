@@ -9,6 +9,7 @@ name = "pypi"
 
 future = "*"
 python-telegram-bot = "*"
+"e1839a8" = {path = ".", editable = true}
 
 
 [dev-packages]
@@ -17,3 +18,4 @@ python-telegram-bot = "*"
 pytest = "*"
 pytest-xdist = "*"
 pytest-cov = "*"
+freezegun = "*"

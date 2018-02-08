@@ -2,7 +2,7 @@ import datetime
 import re
 from calendar import monthrange
 
-import datacore
+from bookbot import datacore
 
 month_map = {1: "Январь", 2: "Февраль",
              3: "Март", 4: "Апрель", 5: "Май",
@@ -45,7 +45,7 @@ def available_from_to(msg: str):
     if current.month == int(msg):
         return current.day, monthrange(year=current.year, month=current.month)[1]
     else:
-        return 1, monthrange(year=current.year, month=current.month)[1]
+        return 1, monthrange(year=current.year, month=msg)[1]
 
 
 def calc_free_time(user: str):

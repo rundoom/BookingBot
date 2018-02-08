@@ -103,6 +103,10 @@ class Repository:
             user_inner = {consts.PHONE_PICKED: self.user_data[user][consts.PHONE_PICKED], consts.EXTERNAL_NAME_PICKED: self.user_data[user][consts.EXTERNAL_NAME_PICKED]}
             self.user_info[user] = user_inner
 
+    def clear_user_info(self, user: str):
+        if user in self.user_info:
+            del self.user_info[user]
+
     def get_booked(self):
         return self.booked
 

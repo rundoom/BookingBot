@@ -1,14 +1,20 @@
-import datetime
+from datetime import datetime
+import logging
 from calendar import monthrange
 
-import dateutilbot
-import filters
-from dispatcher import *
+import re
+
+from bookbot import dateutilbot
+from bookbot import filters
+from bookbot import dispatcher
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import (TimedOut, NetworkError)
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 
-from datacore import *
+from bookbot import datacore
+from bookbot.datacore import consts, repository, CallData
+
+from bookbot.dispatcher import FilteredCallbackQueryHandler
 
 
 def main():
@@ -19,6 +25,7 @@ def main():
     dispatcher_handlers = [
         CommandHandler('start', start),
         CommandHandler('book', book),
+        CommandHandler('clear', clear_info),
         CommandHandler(filters=Filters.user(user_id=adm), command='stats', callback=stats),
         MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.MONTH_PICKED, check_info=False),
                        day_to_time_pick),
@@ -99,11 +106,11 @@ def start_to_end_time_pick(bot, update):
     query = update.callback_query
     username = query.message.chat_id
     bot.send_message(chat_id=username,
-                     text=f"Время начала: {data_as_json(query.data).val}")
+                     text=f"Время начала: {datacore.data_as_json(query.data).val}")
 
     repository.update_stance(stance=consts.START_TIME_PICKED, user=username)
     repository.update_data(user=username,
-                           data=CallData(call_type=consts.START_TIME_PICKED, call_val=data_as_json(query.data).val))
+                           data=CallData(call_type=consts.START_TIME_PICKED, call_val=datacore.data_as_json(query.data).val))
 
     possible_start = dateutilbot.possible_time_for_end(username)
 
@@ -153,7 +160,7 @@ def day_to_time_pick(bot, update):
 def month_to_day_pick(bot, update):
     query = update.callback_query
 
-    bot.send_message(text=f"Выбран {dateutilbot.month_map[data_as_json(query.data).val]}",
+    bot.send_message(text=f"Выбран {dateutilbot.month_map[datacore.data_as_json(query.data).val]}",
                      chat_id=query.message.chat_id,
                      message_id=query.message.message_id)
 
@@ -164,10 +171,10 @@ def month_to_day_pick(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
 
-    repository.update_stance(stance=data_as_json(query.data).type,
+    repository.update_stance(stance=datacore.data_as_json(query.data).type,
                              user=query.message.chat_id)
 
-    repository.update_data(user=query.message.chat_id, data=data_as_json(query.data), custom_type=consts.YEAR_PICKED)
+    repository.update_data(user=query.message.chat_id, data=datacore.data_as_json(query.data), custom_type=consts.YEAR_PICKED)
 
 
 def end_time_to_commit_pick(bot, update):
@@ -179,11 +186,11 @@ def end_time_to_commit_pick(bot, update):
                      text=f"Выбрано время:\n{user_data[consts.DAY_PICKED]}"
                           f" {dateutilbot.morph_month_name(dateutilbot.month_map[user_data[consts.MONTH_PICKED]])}"
                           f" от {user_data[consts.START_TIME_PICKED]}"
-                          f" до {data_as_json(query.data).val}")
+                          f" до {datacore.data_as_json(query.data).val}")
 
     repository.update_stance(stance=consts.END_TIME_PICKED, user=username)
     repository.update_data(user=username,
-                           data=CallData(call_type=consts.END_TIME_PICKED, call_val=data_as_json(query.data).val))
+                           data=CallData(call_type=consts.END_TIME_PICKED, call_val=datacore.data_as_json(query.data).val))
 
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
@@ -230,7 +237,7 @@ def commit_pick(bot, update):
     username = query.message.chat_id
     user_data = repository.user_data[username]
 
-    if data_as_json(query.data).val == "True":
+    if datacore.data_as_json(query.data).val == "True":
         repository.book_range(username)
         bot.send_message(chat_id=username, text=f"Заказ подтверждён")
         user_info = repository.get_user_info(username)
@@ -251,6 +258,11 @@ def commit_pick(bot, update):
 def unresolved_pick(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
+
+
+def clear_info(bot, update):
+    repository.clear_user_info(update.message.chat_id)
+    bot.send_message(chat_id=update.message.chat_id, text=f"Ваш профиль очищен")
 
 
 if __name__ == '__main__':
