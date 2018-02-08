@@ -1,14 +1,60 @@
 import datetime
 from calendar import monthrange
-from functools import reduce
-
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import (TimedOut, NetworkError)
 
 import dateutil
 import filters
-from datacore import *
 from dispatcher import *
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import (TimedOut, NetworkError)
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+
+from datacore import *
+
+
+def main():
+    updater = Updater(token='307563270:AAE9mV3culSEjGavFPty-FUW8V2euI2xYzI')
+    global dispatcher
+    dispatcher = updater.dispatcher
+    pass
+    dispatcher_handlers = [
+        CommandHandler('start', start),
+        CommandHandler('book', book),
+        CommandHandler(filters=Filters.user(user_id=adm), command='stats', callback=stats),
+        MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.MONTH_PICKED, check_info=False),
+                       day_to_time_pick),
+        MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.PHONE_PICKED, check_info=True),
+                       external_name_to_commit_pick),
+        MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.END_TIME_PICKED, check_info=True),
+                       phone_to_external_name_pick),
+        MessageHandler(Filters.text, echo),
+        FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.MONTH_PICKED,
+                                                                                 user_stance=consts.NOTHING_PICKED),
+                                     callback=month_to_day_pick),
+        FilteredCallbackQueryHandler(
+            filters=filters.StanceResolveFilterCallback(callback_stance=consts.START_TIME_PICKED,
+                                                        user_stance=consts.DAY_PICKED),
+            callback=start_to_end_time_pick),
+        FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.END_TIME_PICKED,
+                                                                                 user_stance=consts.START_TIME_PICKED),
+                                     callback=end_time_to_commit_pick),
+        FilteredCallbackQueryHandler(filters=filters.filter_committed, callback=commit_pick),
+        CallbackQueryHandler(callback=unresolved_pick)
+    ]
+
+    for x in dispatcher_handlers:
+        dispatcher.add_handler(x)
+
+    def error_callback(bot, update, error):
+        try:
+            raise error
+        except (TimedOut, NetworkError):
+            logging.info("Network error occurred, start polling again")
+            updater.start_polling()
+
+    dispatcher.add_error_handler(error_callback)
+
+    updater.start_polling(read_latency=10, bootstrap_retries=5)
+
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -36,7 +82,7 @@ def book(bot, update):
 
 
 def stats(bot, update):
-    all = "".join(repository.get_booked())
+    all = "".join(str(repository.get_booked()))
 
     bot.send_message(chat_id=update.message.chat_id, text=all)
 
@@ -162,10 +208,10 @@ def print_commit(bot, username):
 
 def phone_to_external_name_pick(bot, update):
     username = update.message.chat_id
-    if not re.match("^\+?[\d\s-]{11,}$", update.message.text):
+    if not re.match(r"^\+?[\d\s-]{11,}$", update.message.text):
         bot.send_message(chat_id=username, text="Номер телефона некорректен, введите снова")
         return
-    repository.update_data(user=username, data=CallData(call_type=consts.PHONE_PICKED, call_val=re.sub(pattern="[\s-]", repl="", string=re.sub(pattern="^8", repl="+7", string=update.message.text))))
+    repository.update_data(user=username, data=CallData(call_type=consts.PHONE_PICKED, call_val=re.sub(pattern=r"[\s-]", repl="", string=re.sub(pattern="^8", repl="+7", string=update.message.text))))
     repository.update_stance(stance=consts.PHONE_PICKED, user=update.message.chat_id)
 
     bot.send_message(chat_id=username, text="Введите имя коллектива")
@@ -207,33 +253,5 @@ def unresolved_pick(bot, update):
                       message_id=update.callback_query.message.message_id)
 
 
-dispatcher_handlers = [
-    CommandHandler('start', start),
-    CommandHandler('book', book),
-    CommandHandler(filters=Filters.user(user_id=adm), command='stats', callback=stats),
-    MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.MONTH_PICKED, check_info=False), day_to_time_pick),
-    MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.PHONE_PICKED, check_info=True), external_name_to_commit_pick),
-    MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.END_TIME_PICKED, check_info=True), phone_to_external_name_pick),
-    MessageHandler(Filters.text, echo),
-    FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.MONTH_PICKED, user_stance=consts.NOTHING_PICKED), callback=month_to_day_pick),
-    FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.START_TIME_PICKED, user_stance=consts.DAY_PICKED), callback=start_to_end_time_pick),
-    FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.END_TIME_PICKED, user_stance=consts.START_TIME_PICKED), callback=end_time_to_commit_pick),
-    FilteredCallbackQueryHandler(filters=filters.filter_committed, callback=commit_pick),
-    CallbackQueryHandler(callback=unresolved_pick)
-]
-
-for x in dispatcher_handlers:
-    dispatcher.add_handler(x)
-
-updater.start_polling(read_latency=10, bootstrap_retries=5)
-
-
-def error_callback(bot, update, error):
-    try:
-        raise error
-    except (TimedOut, NetworkError):
-        logging.info("Network error occurred, start polling again")
-        updater.start_polling()
-
-
-dispatcher.add_error_handler(error_callback)
+if __name__ == '__main__':
+    main()

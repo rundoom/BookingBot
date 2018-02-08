@@ -1,11 +1,7 @@
-from telegram.ext import *
 from telegram import Update
 import re
 from future.utils import string_types
-
-
-updater = Updater(token='307563270:AAE9mV3culSEjGavFPty-FUW8V2euI2xYzI')
-dispatcher = updater.dispatcher
+from telegram.ext import CallbackQueryHandler
 
 
 class FilteredCallbackQueryHandler(CallbackQueryHandler):
