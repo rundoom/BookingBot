@@ -196,7 +196,7 @@ def end_time_to_commit_pick(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
 
-    if username in repository.user_info:
+    if datacore.repository.get_user_info(username) is not None:
         print_commit(bot, username)
     else:
         bot.send_message(chat_id=username,
@@ -244,7 +244,7 @@ def commit_pick(bot, update):
         user_info = repository.get_user_info(username)
         for x in adm:
             bot.send_message(chat_id=x,
-                             text=f"Заказ пользователем {query.from_user.name}\nКонтактный телефон:\n{user_info[consts.PHONE_PICKED]}\nКоллектив:\n{user_info[consts.EXTERNAL_NAME_PICKED]}\nНа дату:\n{user_data[consts.DAY_PICKED]}"
+                             text=f"Заказ пользователем {query.from_user.name}\nКонтактный телефон:\n{user_info.phone}\nКоллектив:\n{user_info.name}\nНа дату:\n{user_data[consts.DAY_PICKED]}"
                                   f" {dateutilbot.morph_month_name(dateutilbot.month_map[user_data[consts.MONTH_PICKED]])}"
                                   f" от {user_data[consts.START_TIME_PICKED]}"
                                   f" до {user_data[consts.END_TIME_PICKED]}")

@@ -7,7 +7,7 @@ class CommitPick(BaseFilter):
     def filter(self, callback_query):
         return datacore.data_as_json(
             callback_query.data).type == datacore.consts.COMMITTED and (resolve_stance_for_callback(callback_query,
-                                                                                                    datacore.consts.END_TIME_PICKED) or (callback_query.message.chat_id not in datacore.repository.user_info and (resolve_stance_for_callback(callback_query,
+                                                                                                    datacore.consts.END_TIME_PICKED) or (datacore.repository.get_user_info(callback_query.message.chat_id) is None and (resolve_stance_for_callback(callback_query,
                                                                                                                                                                                                                                               datacore.consts.EXTERNAL_NAME_PICKED))))
 
 
@@ -27,7 +27,7 @@ class StanceResolveFilter(BaseFilter):
         self.check_info = check_info
 
     def filter(self, message):
-        return resolve_stance(message, self.stance) and (not self.check_info or message.chat_id not in datacore.repository.user_info)
+        return resolve_stance(message, self.stance) and (not self.check_info or datacore.repository.get_user_info(message.chat_id) is None)
 
 
 def resolve_stance(message, stance) -> bool:

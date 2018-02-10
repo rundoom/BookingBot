@@ -4,6 +4,11 @@ import re
 from datetime import datetime
 from typing import Union
 
+from sqlalchemy import extract, exists
+
+from bookbot import dataentities
+from bookbot.dataentities import session
+
 
 class Consts:
     def __init__(self):
@@ -19,16 +24,6 @@ class Consts:
 
 
 consts = Consts()
-
-
-class BookedRange:
-    def __init__(self, start_date: datetime, end_date: datetime, username: str):
-        self.start_date = start_date
-        self.end_date = end_date
-        self.username = username
-
-    def __str__(self):
-        return str(self.__dict__)
 
 
 class CurrentStance:
@@ -52,8 +47,6 @@ class Repository:
     def __init__(self):
         self.user_stances = {}
         self.user_data = {}
-        self.booked = []
-        self.user_info = {}
 
     def purge_user(self, user):
         if user in self.user_stances:
@@ -73,8 +66,9 @@ class Repository:
                             month=int(sts[consts.MONTH_PICKED]),
                             hour=int(re.search("\d+(?=:)", sts[consts.END_TIME_PICKED]).group(0)))
 
-        booked_range = BookedRange(start_date=start_date, end_date=end_date, username=user)
-        self.booked.append(booked_range)
+        booked_range = dataentities.BookedRange(start_date=start_date, end_date=end_date, username=user)
+        session.add(booked_range)
+        session.commit()
         self.register_user(user)
         self.purge_user(user)
         print(booked_range)
@@ -84,7 +78,13 @@ class Repository:
         self.user_stances[user] = stance
 
     def get_busy_on_date(self, day, month, year):
-        on_day = list(filter(lambda x: x.start_date.day == int(day) and x.start_date.month == int(month) and x.start_date.year == int(year), self.booked))
+        start_date = dataentities.BookedRange.start_date
+        on_day = session.query(dataentities.BookedRange)\
+            .filter(extract('day', start_date) == day)\
+            .filter(extract('month', start_date) == month)\
+            .filter(extract('year', start_date) == year)\
+            .all()
+
         return list(map(lambda x: [x.start_date.hour, x.end_date.hour], on_day))
 
     def update_data(self, data: CallData, user: str, custom_type: str = None):
@@ -99,19 +99,24 @@ class Repository:
         logging.info(f"user: {user} input data {self.user_data[user]}")
 
     def register_user(self, user: str):
-        if user not in self.user_info:
-            user_inner = {consts.PHONE_PICKED: self.user_data[user][consts.PHONE_PICKED], consts.EXTERNAL_NAME_PICKED: self.user_data[user][consts.EXTERNAL_NAME_PICKED]}
-            self.user_info[user] = user_inner
+        user_exists = dataentities.session.query(exists().where(dataentities.UserInfo.username == int(user))).scalar()
+        if not user_exists:
+            user_inner = dataentities.UserInfo(phone=self.user_data[user][consts.PHONE_PICKED],
+                                               name=self.user_data[user][consts.EXTERNAL_NAME_PICKED],
+                                               username=int(user))
+            session.add(user_inner)
+            session.commit()
 
     def clear_user_info(self, user: str):
-        if user in self.user_info:
-            del self.user_info[user]
+        user_to_clear = session.query(dataentities.UserInfo).filter_by(username=int(user)).first()
+        session.delete(user_to_clear)
+        session.commit()
 
     def get_booked(self):
-        return self.booked
+        return session.query(dataentities.BookedRange).all()
 
     def get_user_info(self, user):
-        return self.user_info[user]
+        return session.query(dataentities.UserInfo).filter_by(username=int(user)).first()
 
 
 repository = Repository()
