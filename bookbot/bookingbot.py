@@ -66,8 +66,9 @@ def main():
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
-adm = [  # 155247459,
-    153174359]
+adm = [#155247459, #Никита
+        #484412363, #Виталя
+        153174359] #Борис
 
 time_rows = 5
 

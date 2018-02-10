@@ -1,7 +1,9 @@
+import functools
 import logging
 import random
+import unittest
 from datetime import datetime
-from unittest import TestCase
+from unittest import TestCase, suite
 from unittest.mock import patch, MagicMock
 
 from freezegun import freeze_time
@@ -21,6 +23,17 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 freezer = freeze_time(datetime(year=2007, month=9, day=29, hour=15), tick=True)
 freezer.start()
 
+def lncmp(self, testCaseClass):
+    def isTestMethod(attrname, testCaseClass=testCaseClass,
+                     prefix=self.testMethodPrefix):
+        return attrname.startswith(prefix) and \
+               callable(getattr(testCaseClass, attrname))
+
+    testFnNames = list(filter(isTestMethod, list(testCaseClass.__dict__)))
+    return testFnNames
+
+
+patch('unittest.TestLoader.getTestCaseNames', lncmp).start()
 
 class Accumulator:
     def __init__(self):
@@ -34,7 +47,6 @@ class Accumulator:
 
     def __getitem__(self, item: int):
         return self.accum[self.current_method][item]
-
 
 class BotTest(TestCase):
     @classmethod
@@ -57,8 +69,9 @@ class BotTest(TestCase):
 
     def setUp(self):
         acc.current_method = self._testMethodName
+        logging.info(f"Now in {acc.current_method}")
 
-    def testDateSeq(self):
+    def test_date_seq(self):
         self.assertEqual(dateutilbot.month_map[1], 'Январь')
         self.assertEqual(dateutilbot.month_map[12], 'Декабрь')
 
@@ -79,11 +92,43 @@ class BotTest(TestCase):
         self.assertEqual(acc[0][1]['text'], 'Введите /book для того чтобы назначить время')
 
     def test_month_to_day_pick(self):
+        month_pick_call = acc.accum["test_book"]
+
         update = update_callback_factory(user_id=153174359, first_name="Nanodesu", usename="Nanodesuizlesu",
                                          text="/book",
-                                         query_data=CallData(call_type=datacore.consts.MONTH_PICKED, call_val=1,
-                                                             opt_payload=2018))
+                                         query_data=datacore.data_as_json(month_pick_call[0][1]["reply_markup"]['inline_keyboard'][0][0].callback_data))
+
         self.dispatcher.process_update(update)
+        self.assertTrue(153174359 in self.repository.user_data)
+        self.assertEqual(self.repository.user_stances[153174359], datacore.consts.MONTH_PICKED)
+        self.assertEqual(self.repository.user_data[153174359][datacore.consts.MONTH_PICKED], 9)
+        self.assertEqual(self.repository.user_data[153174359][datacore.consts.YEAR_PICKED], 2007)
+
+    def test_day_to_time_pick(self):
+        update = update_factory(user_id=153174359, first_name="Nanodesu", usename="Nanodesuizlesu", text="10")
+        self.dispatcher.process_update(update)
+        self.assertEqual(acc[0][1]["text"], "Допустимые значения: 29 - 30")
+
+        update = update_factory(user_id=153174359, first_name="Nanodesu", usename="Nanodesuizlesu", text="31")
+        self.dispatcher.process_update(update)
+        self.assertEqual(acc[0][1]["text"], "Допустимые значения: 29 - 30")
+
+        update = update_factory(user_id=153174359, first_name="Nanodesu", usename="Nanodesuizlesu", text="28")
+        self.dispatcher.process_update(update)
+        self.assertEqual(acc[0][1]["text"], "Допустимые значения: 29 - 30")
+
+        update = update_factory(user_id=153174359, first_name="Nanodesu", usename="Nanodesuizlesu", text="wrong")
+        self.dispatcher.process_update(update)
+        self.assertEqual(acc[0][1]["text"], "Допустимые значения: 29 - 30")
+
+        update = update_factory(user_id=153174359, first_name="Nanodesu", usename="Nanodesuizlesu", text="30")
+        self.dispatcher.process_update(update)
+
+    # def test_start_to_end_time_pick(self):
+    #     start_time_pick_call = acc.accum["test_day_to_time_pick"]
+    #     update = update_callback_factory(user_id=153174359, first_name="Nanodesu", usename="Nanodesuizlesu",
+    #                                      text="/book",
+    #                                      query_data=datacore.data_as_json(start_time_pick_call[0][1]["reply_markup"]['inline_keyboard'][0][0].callback_data))
 
 
 def update_factory(user_id, first_name, usename, text=None, time=datetime.now()) -> Update:
@@ -95,7 +140,7 @@ def update_factory(user_id, first_name, usename, text=None, time=datetime.now())
 
 
 def send_side_effect(*args, **kwargs):
-    logging.info(f"{args}, {kwargs}")
+    logging.info(f"Proxy args: {args}, {kwargs}")
     acc.append([args, kwargs])
 
 
