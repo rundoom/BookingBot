@@ -4,6 +4,8 @@ from calendar import monthrange
 
 import re
 
+from coverage.files import os
+
 from bookbot import dateutilbot
 from bookbot import filters
 from bookbot import dispatcher
@@ -15,10 +17,12 @@ from bookbot import datacore
 from bookbot.datacore import consts, repository, CallData
 
 from bookbot.dispatcher import FilteredCallbackQueryHandler
+from bookbot import config_holder
+import json
 
 
 def main():
-    updater = Updater(token='307563270:AAE9mV3culSEjGavFPty-FUW8V2euI2xYzI')
+    updater = Updater(token=config_holder.config["BOT_TOKEN"])
     global dispatcher
     dispatcher = updater.dispatcher
     pass

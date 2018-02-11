@@ -6,22 +6,30 @@ from datetime import datetime
 from unittest import TestCase, suite
 from unittest.mock import patch, MagicMock
 
+from coverage.files import os
 from freezegun import freeze_time
+from sqlalchemy import create_engine
 from telegram import Chat, CallbackQuery
 from telegram import Message
 from telegram import Update
 from telegram import User
 
-from bookbot import bookingbot
-from bookbot import datacore
-from bookbot import dateutilbot
-from bookbot.datacore import CallData
+from bookbot import config_holder
+import json
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
 freezer = freeze_time(datetime(year=2007, month=9, day=29, hour=15), tick=True)
 freezer.start()
+
+config_holder.config = json.load(open('resource/config.json'))["TEST"]
+
+from bookbot import bookingbot
+from bookbot import dataentities
+from bookbot import datacore
+from bookbot import dateutilbot
+from bookbot.datacore import CallData
 
 def lncmp(self, testCaseClass):
     def isTestMethod(attrname, testCaseClass=testCaseClass,
@@ -34,6 +42,7 @@ def lncmp(self, testCaseClass):
 
 
 patch('unittest.TestLoader.getTestCaseNames', lncmp).start()
+dataentities.engine = create_engine(f'sqlite:///:memory:', echo=True)
 
 class Accumulator:
     def __init__(self):

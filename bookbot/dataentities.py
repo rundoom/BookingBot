@@ -4,11 +4,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-resource_dir = os.path.join(os.path.dirname(__file__), "resource")
-if not os.path.exists(resource_dir):
-    os.makedirs(resource_dir)
+from bookbot import config_holder
 
-engine = create_engine('sqlite:///resource/bot_data.db', echo=True)
+
+engine = create_engine(config_holder.config["DB_PATH"], echo=True)
 
 Base = declarative_base()
 

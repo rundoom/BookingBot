@@ -7,7 +7,7 @@ setup(
     python_requires=">=3.6.*",
     entry_points={
         'console_scripts': [
-            'bookbot = bookbot.bookingbot:main'
+            'bookbot = bookbot.bot_entry_point:main'
         ]
     }
 )
