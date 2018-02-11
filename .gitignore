@@ -1,6 +1,7 @@
 .idea
 envs/
 test.py
+resource/config.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
