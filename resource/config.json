@@ -4,7 +4,7 @@
     "DB_PATH": "sqlite:///:memory:"
   },
   "DEFAULT": {
-    "BOT_TOKEN": "307563270:AAFD2E7heKlETH4hvEQcvVQ0lYIXwPVRK0A",
+    "BOT_TOKEN": "TOKEN",
     "DB_PATH": "sqlite:///{0}/bot_data.db"
   }
 }
