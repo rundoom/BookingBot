@@ -1,7 +1,12 @@
+from coverage.files import os
 from sqlalchemy import Column, Integer, String, Table, MetaData, DateTime
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
+resource_dir = os.path.join(os.path.dirname(__file__), "resource")
+if not os.path.exists(resource_dir):
+    os.makedirs(resource_dir)
 
 engine = create_engine('sqlite:///resource/bot_data.db', echo=True)
 
