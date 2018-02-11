@@ -110,6 +110,8 @@ class Repository:
 
     def clear_user_info(self, user: str):
         user_to_clear = session.query(dataentities.UserInfo).filter_by(username=int(user)).first()
+        if user_to_clear is None:
+            raise NoSuchUser()
         session.delete(user_to_clear)
         session.commit()
 
@@ -135,3 +137,8 @@ def as_call_data(dct):
 
 def data_as_json(serial_json) -> CallData:
     return json.loads(serial_json, object_hook=as_call_data)
+
+
+class NoSuchUser(Exception):
+    def __init__(self):
+        pass

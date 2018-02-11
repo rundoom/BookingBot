@@ -292,8 +292,12 @@ def unresolved_pick(bot, update):
 
 
 def clear_info(bot, update):
-    repository.clear_user_info(update.message.chat_id)
-    bot.send_message(chat_id=update.message.chat_id, text=f"Ваш профиль очищен")
+    try:
+        repository.clear_user_info(update.message.chat_id)
+        bot.send_message(chat_id=update.message.chat_id, text=f"Ваш профиль очищен")
+    except datacore.NoSuchUser:
+        bot.send_message(chat_id=update.message.chat_id, text=f"О вашем профиле нет данных")
+
 
 
 if __name__ == '__main__':
