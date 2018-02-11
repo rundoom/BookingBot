@@ -1,24 +1,18 @@
-from datetime import datetime
 import logging
-from calendar import monthrange
-
 import re
+from calendar import monthrange
+from datetime import datetime
 
-from coverage.files import os
-
-from bookbot import dateutilbot
-from bookbot import filters
-from bookbot import dispatcher
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import (TimedOut, NetworkError)
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 
-from bookbot import datacore
-from bookbot.datacore import consts, repository, CallData
-
-from bookbot.dispatcher import FilteredCallbackQueryHandler
 from bookbot import config_holder
-import json
+from bookbot import datacore
+from bookbot import dateutilbot
+from bookbot import filters
+from bookbot.datacore import consts, repository, CallData
+from bookbot.dispatcher import FilteredCallbackQueryHandler
 
 
 def main():
@@ -30,6 +24,7 @@ def main():
         CommandHandler('start', start),
         CommandHandler('book', book),
         CommandHandler('clear', clear_info),
+        CommandHandler('unbook', unbook),
         CommandHandler(filters=Filters.user(user_id=adm), command='stats', callback=stats),
         MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.MONTH_PICKED, check_info=False),
                        day_to_time_pick),
@@ -49,6 +44,7 @@ def main():
                                                                                  user_stance=consts.START_TIME_PICKED),
                                      callback=end_time_to_commit_pick),
         FilteredCallbackQueryHandler(filters=filters.filter_committed, callback=commit_pick),
+        FilteredCallbackQueryHandler(filters=filters.CallbackOnlyFilter(callback_stance=consts.RANGE_REMOVE), callback=remove_range),
         CallbackQueryHandler(callback=unresolved_pick)
     ]
 
@@ -246,6 +242,7 @@ def commit_pick(bot, update):
     if datacore.data_as_json(query.data).val == "True":
         repository.book_range(username)
         bot.send_message(chat_id=username, text=f"Заказ подтверждён")
+        bot.send_message(chat_id=username, text=f"Уважаемые музыканты, если Вы передумали, или по каким-либо причинам не сможете посетить студию в выбранное вами время, просьба отменить бронь, как минимум за сутки.\nДля этого введите /unbook\nЕсли желаете удалить информацию о своём номере телефона и названии коллектива введите /clear")
         user_info = repository.get_user_info(username)
         for x in adm:
             bot.send_message(chat_id=x,
@@ -260,6 +257,34 @@ def commit_pick(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
 
+
+def unbook(bot, update):
+    booked_ranges = datacore.repository.get_booked_for_user(update.message.chat_id)
+
+    if len(booked_ranges) == 0:
+        bot.send_message(chat_id=update.message.chat_id, text="Вы не бронировали времени")
+        return
+
+    booked_ranges_keys = [[InlineKeyboardButton(text=f'{x.start_date.strftime("%d/%m/%Y %H:%M")}-{x.end_date.strftime("%H:%M")}',
+                                                callback_data=CallData(
+                                                    call_type=consts.RANGE_REMOVE,
+                                                    call_val=x.id)
+                                                .to_json())] for x in booked_ranges]
+
+    bot.send_message(chat_id=update.message.chat_id, text="Выберите диапазон который нужно отменить",
+                     reply_markup=InlineKeyboardMarkup(inline_keyboard=booked_ranges_keys))
+
+
+def remove_range(bot, update):
+    query = update.callback_query
+    username = query.message.chat_id
+
+    datacore.repository.unbook_range(datacore.data_as_json(query.data).val)
+
+    bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
+                      message_id=update.callback_query.message.message_id)
+
+    bot.send_message(chat_id=username, text=f"Заказ удалён")
 
 def unresolved_pick(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,

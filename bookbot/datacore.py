@@ -21,6 +21,7 @@ class Consts:
         self.PHONE_PICKED = "phone_picked"
         self.EXTERNAL_NAME_PICKED = "external_name_picked"
         self.COMMITTED = "committed"
+        self.RANGE_REMOVE = "range_remove"
 
 
 consts = Consts()
@@ -118,6 +119,12 @@ class Repository:
     def get_user_info(self, user):
         return session.query(dataentities.UserInfo).filter_by(username=int(user)).first()
 
+    def get_booked_for_user(self, user: str):
+        return session.query(dataentities.BookedRange).filter_by(username=int(user)).all()
+
+    def unbook_range(self, id: int):
+        session.query(dataentities.BookedRange).filter_by(id=id).delete()
+        session.commit()
 
 repository = Repository()
 

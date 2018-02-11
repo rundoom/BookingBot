@@ -21,6 +21,14 @@ class StanceResolveFilterCallback(BaseFilter):
             callback_query.data).type == self.callback_stance and resolve_stance_for_callback(callback_query, self.user_stance)
 
 
+class CallbackOnlyFilter(BaseFilter):
+    def __init__(self, callback_stance):
+        self.callback_stance = callback_stance
+
+    def filter(self, callback_query):
+        return datacore.data_as_json(callback_query.data).type == self.callback_stance
+
+
 class StanceResolveFilter(BaseFilter):
     def __init__(self, stance, check_info: bool):
         self.stance = stance
