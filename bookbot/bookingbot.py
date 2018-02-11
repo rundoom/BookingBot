@@ -72,6 +72,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 adm = [#155247459, #Никита
         #484412363, #Виталя
+        #10496391, #Света
         153174359] #Борис
 
 time_rows = 5

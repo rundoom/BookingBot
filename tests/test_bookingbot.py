@@ -17,9 +17,6 @@ from telegram import User
 from bookbot import config_holder
 import json
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-
 freezer = freeze_time(datetime(year=2007, month=9, day=29, hour=15), tick=True)
 freezer.start()
 
@@ -42,7 +39,6 @@ def lncmp(self, testCaseClass):
 
 
 patch('unittest.TestLoader.getTestCaseNames', lncmp).start()
-dataentities.engine = create_engine(f'sqlite:///:memory:', echo=True)
 
 class Accumulator:
     def __init__(self):
