@@ -1,0 +1,10 @@
+{
+  "TEST": {
+    "BOT_TOKEN": "307563270:AAE9mV3culSEjGavFPty-FUW8V2euI2xYzI",
+    "DB_PATH": "sqlite:///:memory:"
+  },
+  "DEFAULT": {
+    "BOT_TOKEN": "REAL_TOKEN",
+    "DB_PATH": "sqlite:///{0}/bot_data.db"
+  }
+}
