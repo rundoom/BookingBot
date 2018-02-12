@@ -29,6 +29,7 @@ class UserInfo(Base):
     phone = Column(String)
     name = Column(String)
     username = Column(Integer, unique=True)
+    userlink = Column(String)
 
     def __repr__(self):
         return str(f"{type(self)}:{self.__dict__}")
@@ -44,6 +45,7 @@ Table('user_info', MetaData(bind=None),
             Column('id', Integer(), primary_key=True, nullable=False),
             Column('phone', String()),
             Column('name', String()),
+            Column('userlink', String()),
             Column('username', Integer(), unique=True))
 
 Base.metadata.create_all(engine)

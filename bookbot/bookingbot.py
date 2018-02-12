@@ -71,7 +71,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 
 adm = [#155247459, #Никита
-        484412363, #Виталя
+        #484412363, #Виталя
         10496391, #Света
         153174359] #Борис
 
@@ -101,7 +101,14 @@ def stats(bot, update):
         bot.send_message(chat_id=update.message.chat_id, text="Нет забронированных диапазонов")
         return
 
-    text_repr = "\n".join(map(lambda x: f'{x.start_date.strftime("%H:%M")}-{x.end_date.strftime("%H:%M")} : {x.username}', close))
+    unique_usernames = set(map(lambda x: x.username, close))
+    uim = dict(map(lambda k: (k, datacore.repository.get_user_info(k)), unique_usernames))
+
+    text_repr = "\n".join(map(lambda x: f'{x.start_date.strftime("%H:%M")}-{x.end_date.strftime("%H:%M")}:\n'
+                                        f'{uim[x.username].userlink}\n'
+                                        f'{uim[x.username].phone}\n'
+                                        f'{uim[x.username].name}'
+                                        f'----------------', close))
 
     control_buttons = [
         [InlineKeyboardButton(text="<<",
@@ -128,7 +135,14 @@ def update_stats(bot, update):
         else:
             close = repository.get_booked(datetime.max, is_after)
 
-    text_repr = "\n".join(map(lambda x: f'{x.start_date.strftime("%H:%M")}-{x.end_date.strftime("%H:%M")} : {x.username}', close))
+    unique_usernames = set(map(lambda x: x.username, close))
+    uim = dict(map(lambda k: (k, datacore.repository.get_user_info(k)), unique_usernames))
+
+    text_repr = "\n".join(map(lambda x: f'{x.start_date.strftime("%H:%M")}-{x.end_date.strftime("%H:%M")}:\n'
+                                        f'{uim[x.username].userlink}\n'
+                                        f'{uim[x.username].phone}\n'
+                                        f'{uim[x.username].name}'
+                                        f'\n----------------', close))
 
     control_buttons = [
         [InlineKeyboardButton(text="<<",
@@ -233,7 +247,6 @@ def month_to_day_pick(bot, update):
     repository.update_data(user=query.message.chat_id, data=month_call)
 
 
-
 def end_time_to_commit_pick(bot, update):
     query = update.callback_query
     username = query.message.chat_id
@@ -295,9 +308,9 @@ def commit_pick(bot, update):
     user_data = repository.user_data[username]
 
     if datacore.data_as_json(query.data).val == "True":
-        repository.book_range(username)
+        repository.book_range(username, query.from_user.name)
         bot.send_message(chat_id=username, text=f"Заказ подтверждён")
-        bot.send_message(chat_id=username, text=f"Уважаемые музыканты, если Вы передумали, или по каким-либо причинам не сможете посетить студию в выбранное вами время, просьба отменить бронь, как минимум за сутки.\nДля этого введите /unbook\nЕсли желаете удалить информацию о своём номере телефона и названии коллектива введите /clear")
+        bot.send_message(chat_id=username, text=f"Уважаемые музыканты, если Вы передумали, или по каким-либо причинам не сможете посетить студию в выбранное вами время, просьба отменить бронь, как минимум за сутки.\nДля этого введите /unbook")
         user_info = repository.get_user_info(username)
         for x in adm:
             bot.send_message(chat_id=x,
@@ -347,6 +360,7 @@ def unresolved_pick(bot, update):
 
 
 def clear_info(bot, update):
+    pass
     # try:
     #     repository.clear_user_info(update.message.chat_id)
     #     bot.send_message(chat_id=update.message.chat_id, text=f"Ваш профиль очищен")

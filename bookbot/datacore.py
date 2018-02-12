@@ -58,7 +58,7 @@ class Repository:
         if user in self.user_data:
             del self.user_data[user]
 
-    def book_range(self, user: str):
+    def book_range(self, user: str, userlink: str):
         sts = self.user_data[user]
 
         start_date = datetime(year=int(sts[consts.YEAR_PICKED]), day=int(sts[consts.DAY_PICKED]),
@@ -72,7 +72,7 @@ class Repository:
         booked_range = dataentities.BookedRange(start_date=start_date, end_date=end_date, username=user)
         session.add(booked_range)
         session.commit()
-        self.register_user(user)
+        self.register_user(user, userlink)
         self.purge_user(user)
         print(booked_range)
 
@@ -99,12 +99,13 @@ class Repository:
 
         logging.info(f"user: {user} input data {self.user_data[user]}")
 
-    def register_user(self, user: str):
+    def register_user(self, user: str, userlink: str):
         user_exists = dataentities.session.query(exists().where(dataentities.UserInfo.username == int(user))).scalar()
         if not user_exists:
             user_inner = dataentities.UserInfo(phone=self.user_data[user][consts.PHONE_PICKED],
                                                name=self.user_data[user][consts.EXTERNAL_NAME_PICKED],
-                                               username=int(user))
+                                               username=int(user),
+                                               userlink=userlink)
             session.add(user_inner)
             session.commit()
 
@@ -139,7 +140,7 @@ class Repository:
             .filter(extract('day', start_date) == next_date.start_date.day) \
             .filter(extract('month', start_date) == next_date.start_date.month) \
             .filter(extract('year', start_date) == next_date.start_date.year) \
-            .all()
+            .order_by(dataentities.BookedRange.start_date).all()
 
     def get_user_info(self, user):
         return session.query(dataentities.UserInfo).filter_by(username=int(user)).first()
