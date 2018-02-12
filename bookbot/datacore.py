@@ -1,10 +1,11 @@
 import json
 import logging
+import operator
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Union
 
-from sqlalchemy import extract, exists
+from sqlalchemy import extract, exists, desc
 
 from bookbot import dataentities
 from bookbot.dataentities import session
@@ -22,6 +23,8 @@ class Consts:
         self.EXTERNAL_NAME_PICKED = "external_name_picked"
         self.COMMITTED = "committed"
         self.RANGE_REMOVE = "range_remove"
+        self.NEXT_DATE = "next_date"
+        self.PREVIOUS_DATE = "previous_date"
 
 
 consts = Consts()
@@ -34,10 +37,9 @@ class CurrentStance:
 
 
 class CallData:
-    def __init__(self, call_type: str, call_val: Union[str, int], opt_payload=None):
+    def __init__(self, call_type: str, call_val: Union[str, int, float]):
         self.type = call_type
         self.val = call_val
-        self.load = opt_payload
 
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__,
@@ -88,15 +90,13 @@ class Repository:
 
         return list(map(lambda x: [x.start_date.hour, x.end_date.hour], on_day))
 
-    def update_data(self, data: CallData, user: str, custom_type: str = None):
+    def update_data(self, data: CallData, user: str):
         if user in self.user_data:
             self.user_data[user][data.type] = data.val
         else:
             user_inner = {data.type: data.val}
             self.user_data[user] = user_inner
 
-        if custom_type is not None and data.load is not None:
-            self.user_data[user][custom_type] = data.load
         logging.info(f"user: {user} input data {self.user_data[user]}")
 
     def register_user(self, user: str):
@@ -115,8 +115,31 @@ class Repository:
         session.delete(user_to_clear)
         session.commit()
 
-    def get_booked(self):
-        return session.query(dataentities.BookedRange).all()
+    def get_booked(self, date: datetime, is_after: bool, is_now: bool = False):
+        order_func = None
+        compare_op = None
+        if is_after:
+            compare_op = operator.ge
+            if not is_now:
+                date += timedelta(days=1)
+            order_func = stub_func
+        else:
+            compare_op = operator.lt
+            order_func = desc
+
+        date = date.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_date = dataentities.BookedRange.start_date
+        next_date = session.query(dataentities.BookedRange).filter(compare_op(dataentities.BookedRange.start_date, date))\
+            .order_by(order_func(dataentities.BookedRange.start_date)).first()
+
+        if not next_date:
+            return None
+
+        return session.query(dataentities.BookedRange) \
+            .filter(extract('day', start_date) == next_date.start_date.day) \
+            .filter(extract('month', start_date) == next_date.start_date.month) \
+            .filter(extract('year', start_date) == next_date.start_date.year) \
+            .all()
 
     def get_user_info(self, user):
         return session.query(dataentities.UserInfo).filter_by(username=int(user)).first()
@@ -132,11 +155,15 @@ repository = Repository()
 
 
 def as_call_data(dct):
-    return CallData(dct['type'], dct['val'], dct['load'])
+    return CallData(dct['type'], dct['val'])
 
 
 def data_as_json(serial_json) -> CallData:
     return json.loads(serial_json, object_hook=as_call_data)
+
+
+def stub_func(x):
+    return x
 
 
 class NoSuchUser(Exception):

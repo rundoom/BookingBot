@@ -44,7 +44,11 @@ def main():
                                                                                  user_stance=consts.START_TIME_PICKED),
                                      callback=end_time_to_commit_pick),
         FilteredCallbackQueryHandler(filters=filters.filter_committed, callback=commit_pick),
-        FilteredCallbackQueryHandler(filters=filters.CallbackOnlyFilter(callback_stance=consts.RANGE_REMOVE), callback=remove_range),
+        FilteredCallbackQueryHandler(filters=filters.CallbackOnlyFilter(callback_stance=consts.RANGE_REMOVE),
+                                     callback=remove_range),
+        FilteredCallbackQueryHandler(filters=filters.CallbackOnlyFilter(callback_stance=consts.NEXT_DATE) |
+                                             filters.CallbackOnlyFilter(callback_stance=consts.PREVIOUS_DATE),
+                                     callback=update_stats),
         CallbackQueryHandler(callback=unresolved_pick)
     ]
 
@@ -67,8 +71,8 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 
 adm = [#155247459, #Никита
-        #484412363, #Виталя
-        #10496391, #Света
+        484412363, #Виталя
+        10496391, #Света
         153174359] #Борис
 
 time_rows = 5
@@ -80,8 +84,7 @@ def book(bot, update):
     month_keys = [[InlineKeyboardButton(text=x.month_name,
                                         callback_data=CallData(
                                             call_type=consts.MONTH_PICKED,
-                                            call_val=x.month_number,
-                                            opt_payload=x.year)
+                                            call_val=f"{x.month_number}/{x.year}")
                                         .to_json())] for x in next_few]
 
     bot.send_message(chat_id=update.message.chat_id, text="На какой месяц?",
@@ -91,9 +94,52 @@ def book(bot, update):
 
 
 def stats(bot, update):
-    all = "".join(str(repository.get_booked()))
+    now_date = datetime.now()
+    close = repository.get_booked(now_date, True, True)
 
-    bot.send_message(chat_id=update.message.chat_id, text=all)
+    if len(close) == 0:
+        bot.send_message(chat_id=update.message.chat_id, text="Нет забронированных диапазонов")
+        return
+
+    text_repr = "\n".join(map(lambda x: f'{x.start_date.strftime("%H:%M")}-{x.end_date.strftime("%H:%M")} : {x.username}', close))
+
+    control_buttons = [
+        [InlineKeyboardButton(text="<<",
+                              callback_data=CallData(call_type=consts.PREVIOUS_DATE, call_val=close[0].start_date.timestamp()).to_json()),
+         InlineKeyboardButton(text=">>",
+                              callback_data=CallData(call_type=consts.NEXT_DATE, call_val=close[0].start_date.timestamp()).to_json())]]
+
+    bot.send_message(chat_id=update.message.chat_id,
+                     text=f'Занятые диапазоны на дату {close[0].start_date.strftime("%d/%m/%Y")}:'
+                          f'\n{text_repr}', reply_markup=InlineKeyboardMarkup(inline_keyboard=control_buttons))
+
+
+def update_stats(bot, update):
+    query = update.callback_query
+    username = query.message.chat_id
+
+    call_data = datacore.data_as_json(query.data)
+    is_after = call_data.type == consts.NEXT_DATE
+    close = repository.get_booked(datetime.fromtimestamp(call_data.val), is_after)
+
+    if not close:
+        if is_after:
+            close = repository.get_booked(datetime.now(), is_after, True)
+        else:
+            close = repository.get_booked(datetime.max, is_after)
+
+    text_repr = "\n".join(map(lambda x: f'{x.start_date.strftime("%H:%M")}-{x.end_date.strftime("%H:%M")} : {x.username}', close))
+
+    control_buttons = [
+        [InlineKeyboardButton(text="<<",
+                              callback_data=CallData(call_type=consts.PREVIOUS_DATE, call_val=close[0].start_date.timestamp()).to_json()),
+         InlineKeyboardButton(text=">>",
+                              callback_data=CallData(call_type=consts.NEXT_DATE, call_val=close[0].start_date.timestamp()).to_json())]]
+
+    bot.edit_message_text(message_id=query.message.message_id, chat_id=username,
+                     text=f'Занятые диапазоны на дату {close[0].start_date.strftime("%d/%m/%Y")}:'
+                          f'\n{text_repr}', reply_markup=InlineKeyboardMarkup(inline_keyboard=control_buttons))
+
 
 
 def echo(bot, update):
@@ -162,7 +208,14 @@ def day_to_time_pick(bot, update):
 def month_to_day_pick(bot, update):
     query = update.callback_query
 
-    bot.send_message(text=f"Выбран {dateutilbot.month_map[datacore.data_as_json(query.data).val]}",
+    raw_call = datacore.data_as_json(query.data)
+    year_picked = int(re.search("(?<=/)\d+", raw_call.val).group(0))
+    month_picked = int(re.search("\d+(?=/)", raw_call.val).group(0))
+
+    bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
+                      message_id=update.callback_query.message.message_id)
+
+    bot.send_message(text=f"Выбран {dateutilbot.month_map[month_picked]}",
                      chat_id=query.message.chat_id,
                      message_id=query.message.message_id)
 
@@ -170,13 +223,15 @@ def month_to_day_pick(bot, update):
                      chat_id=query.message.chat_id,
                      message_id=query.message.message_id)
 
-    bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
-                      message_id=update.callback_query.message.message_id)
-
     repository.update_stance(stance=datacore.data_as_json(query.data).type,
                              user=query.message.chat_id)
 
-    repository.update_data(user=query.message.chat_id, data=datacore.data_as_json(query.data), custom_type=consts.YEAR_PICKED)
+    year_call = CallData(consts.YEAR_PICKED, year_picked)
+    month_call = CallData(consts.MONTH_PICKED, month_picked)
+
+    repository.update_data(user=query.message.chat_id, data=year_call)
+    repository.update_data(user=query.message.chat_id, data=month_call)
+
 
 
 def end_time_to_commit_pick(bot, update):
@@ -292,11 +347,11 @@ def unresolved_pick(bot, update):
 
 
 def clear_info(bot, update):
-    try:
-        repository.clear_user_info(update.message.chat_id)
-        bot.send_message(chat_id=update.message.chat_id, text=f"Ваш профиль очищен")
-    except datacore.NoSuchUser:
-        bot.send_message(chat_id=update.message.chat_id, text=f"О вашем профиле нет данных")
+    # try:
+    #     repository.clear_user_info(update.message.chat_id)
+    #     bot.send_message(chat_id=update.message.chat_id, text=f"Ваш профиль очищен")
+    # except datacore.NoSuchUser:
+    #     bot.send_message(chat_id=update.message.chat_id, text=f"О вашем профиле нет данных")
 
 
 
