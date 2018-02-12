@@ -5,6 +5,18 @@
   },
   "DEFAULT": {
     "BOT_TOKEN": "REAL_TOKEN",
-    "DB_PATH": "sqlite:///{0}/bot_data.db"
+    "DB_PATH": "sqlite:///{0}/bot_data.db",
+    "ADMINS": [
+      {
+        "id": 100000,
+        "name": "John",
+        "enable": true
+      },
+      {
+        "id": 100001,
+        "name": "Alice",
+        "enable": false
+      }
+    ]
   }
 }

@@ -70,10 +70,7 @@ def main():
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
-adm = [#155247459, #Никита
-        #484412363, #Виталя
-        10496391, #Света
-        153174359] #Борис
+adm = list(map(lambda x: x["id"], filter(lambda x: x["enable"], config_holder.config["ADMINS"])))
 
 time_rows = 5
 
@@ -94,6 +91,7 @@ def book(bot, update):
 
 
 def stats(bot, update):
+    username = update.message.chat_id
     now_date = datetime.now()
     close = repository.get_booked(now_date, True, True)
 
@@ -101,24 +99,11 @@ def stats(bot, update):
         bot.send_message(chat_id=update.message.chat_id, text="Нет забронированных диапазонов")
         return
 
-    unique_usernames = set(map(lambda x: x.username, close))
-    uim = dict(map(lambda k: (k, datacore.repository.get_user_info(k)), unique_usernames))
+    to_send = prepare_stats(close)
 
-    text_repr = "\n".join(map(lambda x: f'{x.start_date.strftime("%H:%M")}-{x.end_date.strftime("%H:%M")}:\n'
-                                        f'{uim[x.username].userlink}\n'
-                                        f'{uim[x.username].phone}\n'
-                                        f'{uim[x.username].name}'
-                                        f'----------------', close))
-
-    control_buttons = [
-        [InlineKeyboardButton(text="<<",
-                              callback_data=CallData(call_type=consts.PREVIOUS_DATE, call_val=close[0].start_date.timestamp()).to_json()),
-         InlineKeyboardButton(text=">>",
-                              callback_data=CallData(call_type=consts.NEXT_DATE, call_val=close[0].start_date.timestamp()).to_json())]]
-
-    bot.send_message(chat_id=update.message.chat_id,
-                     text=f'Занятые диапазоны на дату {close[0].start_date.strftime("%d/%m/%Y")}:'
-                          f'\n{text_repr}', reply_markup=InlineKeyboardMarkup(inline_keyboard=control_buttons))
+    bot.send_message(chat_id=username,
+                     text=to_send["head_message"],
+                     reply_markup=to_send["control_buttons"])
 
 
 def update_stats(bot, update):
@@ -135,6 +120,13 @@ def update_stats(bot, update):
         else:
             close = repository.get_booked(datetime.max, is_after)
 
+    to_send = prepare_stats(close)
+
+    bot.edit_message_text(message_id=query.message.message_id, chat_id=username,
+                     text=to_send["head_message"], reply_markup=to_send["control_buttons"])
+
+
+def prepare_stats(close: list):
     unique_usernames = set(map(lambda x: x.username, close))
     uim = dict(map(lambda k: (k, datacore.repository.get_user_info(k)), unique_usernames))
 
@@ -144,16 +136,18 @@ def update_stats(bot, update):
                                         f'{uim[x.username].name}'
                                         f'\n----------------', close))
 
-    control_buttons = [
+    control_buttons = InlineKeyboardMarkup([
         [InlineKeyboardButton(text="<<",
-                              callback_data=CallData(call_type=consts.PREVIOUS_DATE, call_val=close[0].start_date.timestamp()).to_json()),
+                              callback_data=CallData(call_type=consts.PREVIOUS_DATE,
+                                                     call_val=close[0].start_date.timestamp()).to_json()),
          InlineKeyboardButton(text=">>",
-                              callback_data=CallData(call_type=consts.NEXT_DATE, call_val=close[0].start_date.timestamp()).to_json())]]
+                              callback_data=CallData(call_type=consts.NEXT_DATE,
+                                                     call_val=close[0].start_date.timestamp()).to_json())]])
 
-    bot.edit_message_text(message_id=query.message.message_id, chat_id=username,
-                     text=f'Занятые диапазоны на дату {close[0].start_date.strftime("%d/%m/%Y")}:'
-                          f'\n{text_repr}', reply_markup=InlineKeyboardMarkup(inline_keyboard=control_buttons))
+    head_message = f'Занятые диапазоны на дату {close[0].start_date.strftime("%d/%m/%Y")}:' \
+                   f'\n----------------\n{text_repr}'
 
+    return {"control_buttons": control_buttons, "head_message": head_message}
 
 
 def echo(bot, update):
