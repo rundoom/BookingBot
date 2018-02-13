@@ -314,7 +314,9 @@ def commit_pick(bot, update):
     if datacore.data_as_json(query.data).val == "True":
         repository.book_range(username, query.from_user.name)
         bot.send_message(chat_id=username, text=f"Заказ подтверждён")
-        bot.send_message(chat_id=username, text=f"Уважаемые музыканты, если Вы передумали, или по каким-либо причинам не сможете посетить студию в выбранное вами время, просьба отменить бронь, как минимум за сутки.\nДля этого введите /unbook")
+        bot.send_message(chat_id=username, text=f"Уважаемые музыканты, если Вы передумали, или по каким-либо причинам"
+                                                f" не сможете посетить студию в выбранное вами время, просьба отменить"
+                                                f" бронь, как минимум за сутки.\nДля этого введите /unbook")
         user_info = repository.get_user_info(username)
         for x in adm:
             bot.send_message(chat_id=x,
