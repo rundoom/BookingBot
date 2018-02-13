@@ -283,7 +283,7 @@ def print_commit(bot, username):
 
 def phone_to_external_name_pick(bot, update):
     username = update.message.chat_id
-    if not re.match(r"^\+?[\d\s-]{11,}$", update.message.text):
+    if not re.match(r"^\+?[\d\s-]{11,22}$", update.message.text):
         bot.send_message(chat_id=username, text="Номер телефона некорректен, введите снова")
         return
     repository.update_data(user=username, data=CallData(call_type=consts.PHONE_PICKED, call_val=re.sub(pattern=r"[\s-]", repl="", string=re.sub(pattern="^8", repl="+7", string=update.message.text))))
@@ -294,7 +294,13 @@ def phone_to_external_name_pick(bot, update):
 
 def external_name_to_commit_pick(bot, update):
     username = update.message.chat_id
-    repository.update_data(user=username, data=CallData(call_type=consts.EXTERNAL_NAME_PICKED, call_val=update.message.text))
+    message = update.message.text
+    if len(message) > 50:
+        bot.send_message(chat_id=username, text="Название слишком длинное, введите снова")
+        return
+
+    message = re.sub("\n", "", message)
+    repository.update_data(user=username, data=CallData(call_type=consts.EXTERNAL_NAME_PICKED, call_val=message))
     repository.update_stance(stance=consts.EXTERNAL_NAME_PICKED, user=update.message.chat_id)
 
     print_commit(bot, username)
