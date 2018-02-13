@@ -146,7 +146,8 @@ class Repository:
         return session.query(dataentities.UserInfo).filter_by(username=int(user)).first()
 
     def get_booked_for_user(self, user: str):
-        return session.query(dataentities.BookedRange).filter_by(username=int(user)).all()
+        return session.query(dataentities.BookedRange).filter(dataentities.BookedRange.username == int(user)).filter(
+                                                              dataentities.BookedRange.start_date > datetime.now()).all()
 
     def unbook_range(self, id: int):
         session.query(dataentities.BookedRange).filter_by(id=id).delete()
