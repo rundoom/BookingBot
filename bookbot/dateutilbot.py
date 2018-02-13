@@ -1,6 +1,7 @@
 import datetime
 import re
 from calendar import monthrange
+from typing import Union
 
 from bookbot import datacore
 

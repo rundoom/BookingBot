@@ -354,12 +354,24 @@ def remove_range(bot, update):
     query = update.callback_query
     username = query.message.chat_id
 
-    datacore.repository.unbook_range(datacore.data_as_json(query.data).val)
+    call_data = datacore.data_as_json(query.data)
+    book_data = repository.get_booked_by_id(call_data.val)
+    datacore.repository.unbook_range(call_data.val)
 
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
 
     bot.send_message(chat_id=username, text=f"Заказ удалён")
+
+    user_info = repository.get_user_info(username)
+
+    for x in adm:
+        bot.send_message(chat_id=x,
+                         text=f"Удалён заказ {query.from_user.name}\nКонтактный телефон:\n{user_info.phone}\nКоллектив:\n{user_info.name}\nНа дату:\n{book_data.start_date.day}"
+                              f" {dateutilbot.morph_month_name(dateutilbot.month_map[book_data.start_date.month])}"
+                              f" от {book_data.start_date.hour}:00"
+                              f" до {book_data.end_date.hour}:00")
+
 
 def unresolved_pick(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
