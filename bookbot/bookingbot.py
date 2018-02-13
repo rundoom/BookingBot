@@ -339,7 +339,8 @@ def unbook(bot, update):
         bot.send_message(chat_id=update.message.chat_id, text="Вы не бронировали времени")
         return
 
-    booked_ranges_keys = [[InlineKeyboardButton(text=f'{x.start_date.strftime("%d/%m/%Y %H:%M")}-{x.end_date.strftime("%H:%M")}',
+    booked_ranges_keys = [[InlineKeyboardButton(text=f'{x.start_date.strftime("%d/%m/%Y %H:%M")}-'
+                                                     f'{x.end_date.strftime("%H:%M")}',
                                                 callback_data=CallData(
                                                     call_type=consts.RANGE_REMOVE,
                                                     call_val=x.id)
