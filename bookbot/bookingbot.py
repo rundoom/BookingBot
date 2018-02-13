@@ -2,10 +2,12 @@ import logging
 import re
 from calendar import monthrange
 from datetime import datetime
+import time
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import (TimedOut, NetworkError)
+from telegram.error import (TimedOut, NetworkError, BadRequest, RetryAfter, Unauthorized)
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
+import telegram
 
 from bookbot import config_holder
 from bookbot import datacore
@@ -58,9 +60,11 @@ def main():
     def error_callback(bot, update, error):
         try:
             raise error
-        except (TimedOut, NetworkError):
-            logging.info("Network error occurred, start polling again")
-            updater.start_polling()
+        except BadRequest as e:
+            pass
+        except NetworkError as e:
+            time.sleep(2)
+            dispatcher.process_update(update)
 
     dispatcher.add_error_handler(error_callback)
 
