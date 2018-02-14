@@ -149,7 +149,8 @@ class Repository:
 
     def get_booked_for_user(self, user: str):
         return session.query(dataentities.BookedRange).filter(dataentities.BookedRange.username == int(user)) \
-            .filter(dataentities.BookedRange.start_date > datetime.now()).all()
+            .filter(dataentities.BookedRange.start_date > datetime.now()) \
+            .order_by(dataentities.BookedRange.start_date).all()
 
     def get_booked_by_id(self, id: int):
         return session.query(dataentities.BookedRange).filter_by(id=id).first()
