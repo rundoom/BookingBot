@@ -1,11 +1,25 @@
 {
   "TEST": {
     "BOT_TOKEN": "307563270:AAE9mV3culSEjGavFPty-FUW8V2euI2xYzI",
-    "DB_PATH": "sqlite:///:memory:"
+    "DB_PATH": "sqlite:///:memory:",
+    "SQL_LOGBACK": true,
+        "ADMINS": [
+      {
+        "id": 100000,
+        "name": "John",
+        "enable": true
+      },
+      {
+        "id": 100001,
+        "name": "Alice",
+        "enable": false
+      }
+    ]
   },
   "DEFAULT": {
     "BOT_TOKEN": "REAL_TOKEN",
     "DB_PATH": "sqlite:///{0}/bot_data.db",
+    "SQL_LOGBACK": true,
     "ADMINS": [
       {
         "id": 100000,
