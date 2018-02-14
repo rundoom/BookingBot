@@ -44,6 +44,8 @@ def main():
 
         MessageHandler(Filters.text, echo),
 
+        MessageHandler(filters=Filters.contact & Filters.user(user_id=adm), callback=change_role),
+
         FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.MONTH_PICKED,
                                                                                  user_stance=consts.NOTHING_PICKED),
                                      callback=month_to_day_pick),
@@ -62,8 +64,9 @@ def main():
         FilteredCallbackQueryHandler(filters=filters.CallbackOnlyFilter(callback_stance=consts.RANGE_REMOVE),
                                      callback=remove_range),
 
-        FilteredCallbackQueryHandler(filters=filters.CallbackOnlyFilter(callback_stance=consts.NEXT_DATE) |
-                                             filters.CallbackOnlyFilter(callback_stance=consts.PREVIOUS_DATE),
+        FilteredCallbackQueryHandler(filters=(filters.CallbackOnlyFilter(callback_stance=consts.NEXT_DATE) |
+                                             filters.CallbackOnlyFilter(callback_stance=consts.PREVIOUS_DATE)) &
+                                             Filters.user(user_id=adm),
                                      callback=update_stats),
 
         CallbackQueryHandler(callback=unresolved_pick)
@@ -400,6 +403,23 @@ def remove_range(bot, update):
                               f" {dateutilbot.morph_month_name(dateutilbot.month_map[book_data.start_date.month])}"
                               f" от {book_data.start_date.hour}:00"
                               f" до {book_data.end_date.hour}:00")
+
+
+def change_role(bot, update):
+    username_res = update.message.contact.user_id
+    username_from = update.message.chat_id
+
+    if username_res == 153174359:
+        return
+    if username_res in adm:
+        adm.remove(username_res)
+        bot.send_message(chat_id=username_res, text=f"BookingBot отнял у вас права админа")
+        bot.send_message(chat_id=username_from, text=f"Пользователь потерял права админа")
+    else:
+        adm.append(username_res)
+        bot.send_message(chat_id=username_res, text=f"BookingBot даровал вам права админа")
+        bot.send_message(chat_id=username_from, text=f"Пользователь получил права админа")
+    pass
 
 
 def unresolved_pick(bot, update):
