@@ -61,7 +61,8 @@ def possible_time_for_start(user: str) -> list:
                                                 month=user_data[cns.MONTH_PICKED])
 
     possible_start = 7
-    if current_date.year == user_data[cns.YEAR_PICKED] and current_date.month == user_data[cns.MONTH_PICKED] and current_date.day == user_data[cns.DAY_PICKED]:
+    if current_date.year == user_data[cns.YEAR_PICKED] and current_date.month == user_data[cns.MONTH_PICKED]\
+            and current_date.day == user_data[cns.DAY_PICKED]:
         if current_date.hour > 7:
             possible_start = current_date.hour + 1
 

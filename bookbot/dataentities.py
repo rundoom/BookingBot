@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from bookbot import config_holder
 
 
-engine = create_engine(config_holder.config["DB_PATH"], echo=True)
+engine = create_engine(config_holder.config["DB_PATH"], echo=config_holder.config["SQL_LOGBACK"])
 
 Base = declarative_base()
 

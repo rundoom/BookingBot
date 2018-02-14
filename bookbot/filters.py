@@ -6,9 +6,10 @@ from bookbot import datacore
 class CommitPick(BaseFilter):
     def filter(self, callback_query):
         return datacore.data_as_json(
-            callback_query.data).type == datacore.consts.COMMITTED and (resolve_stance_for_callback(callback_query,
-                                                                                                    datacore.consts.END_TIME_PICKED) or (datacore.repository.get_user_info(callback_query.message.chat_id) is None and (resolve_stance_for_callback(callback_query,
-                                                                                                                                                                                                                                              datacore.consts.EXTERNAL_NAME_PICKED))))
+            callback_query.data).type == datacore.consts.COMMITTED\
+               and (resolve_stance_for_callback(callback_query, datacore.consts.END_TIME_PICKED)
+                    or (datacore.repository.get_user_info(callback_query.message.chat_id)
+                        is None and (resolve_stance_for_callback(callback_query, datacore.consts.EXTERNAL_NAME_PICKED))))
 
 
 class StanceResolveFilterCallback(BaseFilter):
@@ -18,7 +19,8 @@ class StanceResolveFilterCallback(BaseFilter):
 
     def filter(self, callback_query):
         return datacore.data_as_json(
-            callback_query.data).type == self.callback_stance and resolve_stance_for_callback(callback_query, self.user_stance)
+            callback_query.data).type == self.callback_stance\
+               and resolve_stance_for_callback(callback_query, self.user_stance)
 
 
 class CallbackOnlyFilter(BaseFilter):

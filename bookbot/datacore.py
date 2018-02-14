@@ -82,10 +82,10 @@ class Repository:
 
     def get_busy_on_date(self, day, month, year):
         start_date = dataentities.BookedRange.start_date
-        on_day = session.query(dataentities.BookedRange)\
-            .filter(extract('day', start_date) == day)\
-            .filter(extract('month', start_date) == month)\
-            .filter(extract('year', start_date) == year)\
+        on_day = session.query(dataentities.BookedRange) \
+            .filter(extract('day', start_date) == day) \
+            .filter(extract('month', start_date) == month) \
+            .filter(extract('year', start_date) == year) \
             .all()
 
         return list(map(lambda x: [x.start_date.hour, x.end_date.hour], on_day))
@@ -148,8 +148,8 @@ class Repository:
         return session.query(dataentities.UserInfo).filter_by(username=int(user)).first()
 
     def get_booked_for_user(self, user: str):
-        return session.query(dataentities.BookedRange).filter(dataentities.BookedRange.username == int(user)).filter(
-                                                              dataentities.BookedRange.start_date > datetime.now()).all()
+        return session.query(dataentities.BookedRange).filter(dataentities.BookedRange.username == int(user)) \
+            .filter(dataentities.BookedRange.start_date > datetime.now()).all()
 
     def get_booked_by_id(self, id: int):
         return session.query(dataentities.BookedRange).filter_by(id=id).first()
@@ -157,6 +157,7 @@ class Repository:
     def unbook_range(self, id: int):
         session.query(dataentities.BookedRange).filter_by(id=id).delete()
         session.commit()
+
 
 repository = Repository()
 

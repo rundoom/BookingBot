@@ -5,7 +5,7 @@ from datetime import datetime
 import time
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import (TimedOut, NetworkError, BadRequest, RetryAfter, Unauthorized)
+from telegram.error import (TimedOut, NetworkError, BadRequest, RetryAfter, Unauthorized, TelegramError)
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 import telegram
 
@@ -24,33 +24,48 @@ def main():
     pass
     dispatcher_handlers = [
         CommandHandler('start', start),
+
         CommandHandler('book', book),
+
         CommandHandler('clear', clear_info),
+
         CommandHandler('unbook', unbook),
+
         CommandHandler(filters=Filters.user(user_id=adm), command='stats', callback=stats),
+
         MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.MONTH_PICKED, check_info=False),
-                       day_to_time_pick),
+                       callback=day_to_time_pick),
+
         MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.PHONE_PICKED, check_info=True),
-                       external_name_to_commit_pick),
+                       callback=external_name_to_commit_pick),
+
         MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.END_TIME_PICKED, check_info=True),
-                       phone_to_external_name_pick),
+                       callback=phone_to_external_name_pick),
+
         MessageHandler(Filters.text, echo),
+
         FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.MONTH_PICKED,
                                                                                  user_stance=consts.NOTHING_PICKED),
                                      callback=month_to_day_pick),
+
         FilteredCallbackQueryHandler(
             filters=filters.StanceResolveFilterCallback(callback_stance=consts.START_TIME_PICKED,
                                                         user_stance=consts.DAY_PICKED),
             callback=start_to_end_time_pick),
+
         FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.END_TIME_PICKED,
                                                                                  user_stance=consts.START_TIME_PICKED),
                                      callback=end_time_to_commit_pick),
+
         FilteredCallbackQueryHandler(filters=filters.filter_committed, callback=commit_pick),
+
         FilteredCallbackQueryHandler(filters=filters.CallbackOnlyFilter(callback_stance=consts.RANGE_REMOVE),
                                      callback=remove_range),
+
         FilteredCallbackQueryHandler(filters=filters.CallbackOnlyFilter(callback_stance=consts.NEXT_DATE) |
                                              filters.CallbackOnlyFilter(callback_stance=consts.PREVIOUS_DATE),
                                      callback=update_stats),
+
         CallbackQueryHandler(callback=unresolved_pick)
     ]
 
@@ -65,6 +80,8 @@ def main():
         except NetworkError as e:
             time.sleep(2)
             dispatcher.process_update(update)
+        except TelegramError as e:
+            logging.error("Unknown error occurred", e.__traceback__)
 
     dispatcher.add_error_handler(error_callback)
 
@@ -170,7 +187,8 @@ def start_to_end_time_pick(bot, update):
 
     repository.update_stance(stance=consts.START_TIME_PICKED, user=username)
     repository.update_data(user=username,
-                           data=CallData(call_type=consts.START_TIME_PICKED, call_val=datacore.data_as_json(query.data).val))
+                           data=CallData(call_type=consts.START_TIME_PICKED,
+                                         call_val=datacore.data_as_json(query.data).val))
 
     possible_start = dateutilbot.possible_time_for_end(username)
 
@@ -203,7 +221,8 @@ def day_to_time_pick(bot, update):
             repository.update_stance(stance=consts.MONTH_PICKED, user=username)
             del repository.user_data[username][consts.DAY_PICKED]
             bot.send_message(chat_id=update.message.chat_id,
-                             text="На этот день свободного времени нет\nВведите другую дату или /book для того чтобы начать заново")
+                             text="На этот день свободного времени нет\n"
+                                  "Введите другую дату или /book для того чтобы начать заново")
             return
 
         time_keys = [[InlineKeyboardButton(text=x, callback_data=CallData(call_type=consts.START_TIME_PICKED,
@@ -214,7 +233,8 @@ def day_to_time_pick(bot, update):
                          reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
     else:
         bot.send_message(chat_id=update.message.chat_id,
-                         text=f"Допустимые значения: {dateutilbot.available_from_to(picked_month)[0]} - {monthrange(year=current_date.year, month=int(picked_month))[1]}")
+                         text=f"Допустимые значения: {dateutilbot.available_from_to(picked_month)[0]}"
+                              f" - {monthrange(year=current_date.year, month=int(picked_month))[1]}")
 
 
 def month_to_day_pick(bot, update):
@@ -258,7 +278,8 @@ def end_time_to_commit_pick(bot, update):
 
     repository.update_stance(stance=consts.END_TIME_PICKED, user=username)
     repository.update_data(user=username,
-                           data=CallData(call_type=consts.END_TIME_PICKED, call_val=datacore.data_as_json(query.data).val))
+                           data=CallData(call_type=consts.END_TIME_PICKED,
+                                         call_val=datacore.data_as_json(query.data).val))
 
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
@@ -286,7 +307,10 @@ def phone_to_external_name_pick(bot, update):
     if not re.match(r"^\+?[\d\s-]{11,22}$", update.message.text):
         bot.send_message(chat_id=username, text="Номер телефона некорректен, введите снова")
         return
-    repository.update_data(user=username, data=CallData(call_type=consts.PHONE_PICKED, call_val=re.sub(pattern=r"[\s-]", repl="", string=re.sub(pattern="^8", repl="+7", string=update.message.text))))
+
+    phone = re.sub(pattern=r"[\s-]", repl="", string=re.sub(pattern="^8", repl="+7", string=update.message.text))
+    repository.update_data(user=username, data=CallData(call_type=consts.PHONE_PICKED, call_val=phone))
+
     repository.update_stance(stance=consts.PHONE_PICKED, user=update.message.chat_id)
 
     bot.send_message(chat_id=username, text="Введите имя коллектива")
@@ -311,22 +335,26 @@ def commit_pick(bot, update):
     username = query.message.chat_id
     user_data = repository.user_data[username]
 
-    if datacore.data_as_json(query.data).val == "True":
-        repository.book_range(username, query.from_user.name)
-        bot.send_message(chat_id=username, text=f"Заказ подтверждён")
-        bot.send_message(chat_id=username, text=f"Уважаемые музыканты, если Вы передумали, или по каким-либо причинам"
-                                                f" не сможете посетить студию в выбранное вами время, просьба отменить"
-                                                f" бронь, как минимум за сутки.\nДля этого введите /unbook")
-        user_info = repository.get_user_info(username)
-        for x in adm:
-            bot.send_message(chat_id=x,
-                             text=f"Заказ пользователем {query.from_user.name}\nКонтактный телефон:\n{user_info.phone}\nКоллектив:\n{user_info.name}\nНа дату:\n{user_data[consts.DAY_PICKED]}"
-                                  f" {dateutilbot.morph_month_name(dateutilbot.month_map[user_data[consts.MONTH_PICKED]])}"
-                                  f" от {user_data[consts.START_TIME_PICKED]}"
-                                  f" до {user_data[consts.END_TIME_PICKED]}")
-    else:
+    if datacore.data_as_json(query.data).val == "False":
         repository.purge_user(username)
         bot.send_message(chat_id=username, text=f"Заказ отменён")
+        return
+
+    repository.book_range(username, query.from_user.name)
+    bot.send_message(chat_id=username, text=f"Заказ подтверждён")
+    bot.send_message(chat_id=username, text=f"Уважаемые музыканты, если Вы передумали, или по каким-либо причинам"
+                                            f" не сможете посетить студию в выбранное вами время, просьба отменить"
+                                            f" бронь, как минимум за сутки.\nДля этого введите /unbook")
+
+    user_info = repository.get_user_info(username)
+    for x in adm:
+        bot.send_message(chat_id=x,
+                         text=f"Заказ пользователем {query.from_user.name}\nКонтактный телефон:\n"
+                              f"{user_info.phone}\nКоллектив:\n{user_info.name}\n"
+                              f"На дату:\n{user_data[consts.DAY_PICKED]}"
+                              f" {dateutilbot.morph_month_name(dateutilbot.month_map[user_data[consts.MONTH_PICKED]])}"
+                              f" от {user_data[consts.START_TIME_PICKED]}"
+                              f" до {user_data[consts.END_TIME_PICKED]}")
 
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
@@ -367,7 +395,8 @@ def remove_range(bot, update):
 
     for x in adm:
         bot.send_message(chat_id=x,
-                         text=f"Удалён заказ {query.from_user.name}\nКонтактный телефон:\n{user_info.phone}\nКоллектив:\n{user_info.name}\nНа дату:\n{book_data.start_date.day}"
+                         text=f"Удалён заказ {query.from_user.name}\nКонтактный телефон:\n{user_info.phone}\n"
+                              f"Коллектив:\n{user_info.name}\nНа дату:\n{book_data.start_date.day}"
                               f" {dateutilbot.morph_month_name(dateutilbot.month_map[book_data.start_date.month])}"
                               f" от {book_data.start_date.hour}:00"
                               f" до {book_data.end_date.hour}:00")
