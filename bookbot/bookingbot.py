@@ -81,6 +81,8 @@ def main():
             raise error
         except BadRequest as e:
             pass
+        except Unauthorized as e:
+            logging.error("Can not send message")
         except NetworkError as e:
             time.sleep(2)
             dispatcher.process_update(update)
