@@ -33,6 +33,11 @@ def schedule_notifications(book_id):
                       kwargs={"username": booked.username, "hour_num": 24, "book_id": book_id})
 
 
+def remove_notification(book_id):
+    scheduler.remove_job(f"{book_id}:3")
+    scheduler.remove_job(f"{book_id}:24")
+
+
 def send_notification(username, hour_num, book_id):
     user_info = datacore.repository.get_user_info(username)
     booked = datacore.repository.get_booked_by_id(book_id)

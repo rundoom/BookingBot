@@ -160,6 +160,7 @@ class Repository:
     def unbook_range(self, id: int):
         session.query(dataentities.BookedRange).filter_by(id=id).delete()
         session.commit()
+        bot_scheduler.remove_notification(id)
 
 
 repository = Repository()
