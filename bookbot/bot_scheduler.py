@@ -26,8 +26,20 @@ def main():
 
 def schedule_notifications(book_id):
     booked = datacore.repository.get_booked_by_id(book_id)
-    scheduler.add_job(func=send_notification, id=f"{book_id}:3", trigger='date', run_date=booked.start_date - timedelta(hours=3),
-                      kwargs={"username": booked.username, "hour_num": 3, "book_id": book_id})
+    run_date_earl = booked.start_date - timedelta(hours=3)
+
+    if run_date_earl.hour >= 22:
+        run_date_earl -= timedelta(hours=run_date_earl.hour - 21)
+    elif run_date_earl.hour <= 7:
+        run_date_earl -= timedelta(hours=run_date_earl.hour + 3)
+
+    delta_for_earl = booked.start_date - timedelta(hours=3) - run_date_earl
+    total_hour = delta_for_earl.seconds // 3600 + delta_for_earl.days * 24
+
+    scheduler.add_job(func=send_notification, id=f"{book_id}:3", trigger='date', run_date=run_date_earl,
+                      kwargs={"username": booked.username, "hour_num": total_hour, "book_id": book_id})
+
+    print(total_hour)
 
     scheduler.add_job(func=send_notification, id=f"{book_id}:24", trigger='date', run_date=booked.start_date - timedelta(hours=24),
                       kwargs={"username": booked.username, "hour_num": 24, "book_id": book_id})
