@@ -133,7 +133,8 @@ class Repository:
         next_date = session.query(dataentities.BookedRange) \
             .filter(dataentities.BookedRange.start_date > datetime.now()) \
             .filter(compare_op(dataentities.BookedRange.start_date, date)) \
-            .order_by(order_func(dataentities.BookedRange.start_date)).first()
+            .order_by(order_func(dataentities.BookedRange.start_date)) \
+            .limit(1).first()
 
         if not next_date:
             return None
