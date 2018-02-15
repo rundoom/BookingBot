@@ -14,5 +14,11 @@ def main():
 
     bookingbot.main()
 
+    from bookbot import bot_scheduler
+    bot_scheduler.main()
+
+    bot_scheduler.bot = bookingbot.dispatcher.bot
+
+
 if __name__ == "__main__":
     main()

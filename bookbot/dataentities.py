@@ -2,7 +2,7 @@ from coverage.files import os
 from sqlalchemy import Column, Integer, String, Table, MetaData, DateTime
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from bookbot import config_holder
 
@@ -50,6 +50,4 @@ Table('user_info', MetaData(bind=None),
 
 Base.metadata.create_all(engine)
 
-Session = sessionmaker(bind=engine)
-Session.configure(bind=engine)
-session = Session()
+session = scoped_session(sessionmaker(bind=engine))

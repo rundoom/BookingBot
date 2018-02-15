@@ -16,6 +16,7 @@ from bookbot import filters
 from bookbot.datacore import consts, repository, CallData
 from bookbot.dispatcher import FilteredCallbackQueryHandler
 
+dispatcher = None
 
 def main():
     updater = Updater(token=config_holder.config["BOT_TOKEN"])
@@ -31,7 +32,7 @@ def main():
 
         CommandHandler('unbook', unbook),
 
-        CommandHandler(filters=Filters.user(user_id=adm), command='stats', callback=stats),
+        CommandHandler(filters=Filters.user(user_id=config_holder.adm), command='stats', callback=stats),
 
         MessageHandler(Filters.text & filters.StanceResolveFilter(stance=consts.MONTH_PICKED, check_info=False),
                        callback=day_to_time_pick),
@@ -44,7 +45,7 @@ def main():
 
         MessageHandler(Filters.text, echo),
 
-        MessageHandler(filters=Filters.contact & Filters.user(user_id=adm), callback=change_role),
+        MessageHandler(filters=Filters.contact & Filters.user(user_id=config_holder.adm), callback=change_role),
 
         FilteredCallbackQueryHandler(filters=filters.StanceResolveFilterCallback(callback_stance=consts.MONTH_PICKED,
                                                                                  user_stance=consts.NOTHING_PICKED),
@@ -66,7 +67,7 @@ def main():
 
         FilteredCallbackQueryHandler(filters=(filters.CallbackOnlyFilter(callback_stance=consts.NEXT_DATE) |
                                              filters.CallbackOnlyFilter(callback_stance=consts.PREVIOUS_DATE)) &
-                                             Filters.user(user_id=adm),
+                                             Filters.user(user_id=config_holder.adm),
                                      callback=update_stats),
 
         CallbackQueryHandler(callback=unresolved_pick)
@@ -94,7 +95,7 @@ def main():
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
-adm = list(map(lambda x: x["id"], filter(lambda x: x["enable"], config_holder.config["ADMINS"])))
+config_holder.adm = list(map(lambda x: x["id"], filter(lambda x: x["enable"], config_holder.config["ADMINS"])))
 
 time_rows = 5
 
@@ -350,7 +351,7 @@ def commit_pick(bot, update):
                                             f" бронь, как минимум за сутки.\nДля этого введите /unbook")
 
     user_info = repository.get_user_info(username)
-    for x in adm:
+    for x in config_holder.adm:
         bot.send_message(chat_id=x,
                          text=f"Заказ пользователем {query.from_user.name}\nКонтактный телефон:\n"
                               f"{user_info.phone}\nКоллектив:\n{user_info.name}\n"
@@ -396,7 +397,7 @@ def remove_range(bot, update):
 
     user_info = repository.get_user_info(username)
 
-    for x in adm:
+    for x in config_holder.adm:
         bot.send_message(chat_id=x,
                          text=f"Удалён заказ {query.from_user.name}\nКонтактный телефон:\n{user_info.phone}\n"
                               f"Коллектив:\n{user_info.name}\nНа дату:\n{book_data.start_date.day}"
@@ -411,14 +412,14 @@ def change_role(bot, update):
 
     if username_res == 153174359:
         return
-    if username_res in adm:
-        adm.remove(username_res)
-        bot.send_message(chat_id=username_res, text=f"BookingBot отнял у вас права админа")
+    if username_res in config_holder.adm:
+        config_holder.adm.remove(username_res)
         bot.send_message(chat_id=username_from, text=f"Пользователь потерял права админа")
+        bot.send_message(chat_id=username_res, text=f"BookingBot отнял у вас права админа")
     else:
-        adm.append(username_res)
-        bot.send_message(chat_id=username_res, text=f"BookingBot даровал вам права админа")
+        config_holder.adm.append(username_res)
         bot.send_message(chat_id=username_from, text=f"Пользователь получил права админа")
+        bot.send_message(chat_id=username_res, text=f"BookingBot даровал вам права админа")
     pass
 
 

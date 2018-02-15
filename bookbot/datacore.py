@@ -9,6 +9,7 @@ from sqlalchemy import extract, exists, desc
 
 from bookbot import dataentities
 from bookbot.dataentities import session
+from bookbot import bot_scheduler
 
 
 class Consts:
@@ -72,9 +73,9 @@ class Repository:
         booked_range = dataentities.BookedRange(start_date=start_date, end_date=end_date, username=user)
         session.add(booked_range)
         session.commit()
+        bot_scheduler.schedule_notifications(booked_range.id)
         self.register_user(user, userlink)
         self.purge_user(user)
-        print(booked_range)
 
     def update_stance(self, stance: str, user: str):
         logging.info(f"user: {user} in {stance}")
