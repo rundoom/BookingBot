@@ -14,7 +14,7 @@ from bookbot import datacore
 from bookbot import dateutilbot
 from bookbot import filters
 from bookbot.datacore import consts, repository, CallData
-from bookbot.dispatcher import FilteredCallbackQueryHandler
+from bookbot.dispatcher import FilteredCallbackQueryHandler, send_with_retry
 
 dispatcher = None
 
@@ -111,7 +111,7 @@ def book(bot, update):
                                             call_val=f"{x.month_number}/{x.year}")
                                         .to_json())] for x in next_few]
 
-    bot.send_message(chat_id=update.message.chat_id, text="На какой месяц?",
+    send_with_retry(bot=bot, chat_id=update.message.chat_id, text="На какой месяц?",
                      reply_markup=InlineKeyboardMarkup(inline_keyboard=month_keys))
 
     repository.update_stance(user=update.message.chat_id, stance=consts.NOTHING_PICKED)
@@ -123,12 +123,12 @@ def stats(bot, update):
     close = repository.get_booked(now_date, True, True)
 
     if len(close) == 0:
-        bot.send_message(chat_id=update.message.chat_id, text="Нет забронированных диапазонов")
+        send_with_retry(bot=bot, chat_id=update.message.chat_id, text="Нет забронированных диапазонов")
         return
 
     to_send = prepare_stats(close)
 
-    bot.send_message(chat_id=username,
+    send_with_retry(bot=bot, chat_id=username,
                      text=to_send["head_message"],
                      reply_markup=to_send["control_buttons"])
 
@@ -178,7 +178,7 @@ def prepare_stats(close: list):
 
 
 def echo(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text=f"Введите /book для того чтобы назначить время")
+    send_with_retry(bot=bot, chat_id=update.message.chat_id, text=f"Введите /book для того чтобы назначить время")
 
 
 def start(bot, update):
@@ -188,7 +188,7 @@ def start(bot, update):
 def start_to_end_time_pick(bot, update):
     query = update.callback_query
     username = query.message.chat_id
-    bot.send_message(chat_id=username,
+    send_with_retry(bot=bot, chat_id=username,
                      text=f"Время начала: {datacore.data_as_json(query.data).val}")
 
     repository.update_stance(stance=consts.START_TIME_PICKED, user=username)
@@ -205,7 +205,7 @@ def start_to_end_time_pick(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
 
-    bot.send_message(chat_id=username, text="До какого времени?",
+    send_with_retry(bot=bot, chat_id=username, text="До какого времени?",
                      reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
 
 
@@ -226,7 +226,7 @@ def day_to_time_pick(bot, update):
         except dateutilbot.NoTimeAvailable:
             repository.update_stance(stance=consts.MONTH_PICKED, user=username)
             del repository.user_data[username][consts.DAY_PICKED]
-            bot.send_message(chat_id=update.message.chat_id,
+            send_with_retry(bot=bot, chat_id=update.message.chat_id,
                              text="На этот день свободного времени нет\n"
                                   "Введите другую дату или /book для того чтобы начать заново")
             return
@@ -235,10 +235,10 @@ def day_to_time_pick(bot, update):
                                                                           call_val=x).to_json()) for x in
                       possible_time][x:x + time_rows] for x in range(0, len(possible_time), time_rows)]
 
-        bot.send_message(chat_id=update.message.chat_id, text="Время начала: ",
+        send_with_retry(bot=bot, chat_id=update.message.chat_id, text="Время начала: ",
                          reply_markup=InlineKeyboardMarkup(inline_keyboard=time_keys))
     else:
-        bot.send_message(chat_id=update.message.chat_id,
+        send_with_retry(bot=bot, chat_id=update.message.chat_id,
                          text=f"Допустимые значения: {dateutilbot.available_from_to(picked_month)[0]}"
                               f" - {monthrange(year=current_date.year, month=int(picked_month))[1]}")
 
@@ -253,11 +253,11 @@ def month_to_day_pick(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
 
-    bot.send_message(text=f"Выбран {dateutilbot.month_map[month_picked]}",
+    send_with_retry(bot=bot, text=f"Выбран {dateutilbot.month_map[month_picked]}",
                      chat_id=query.message.chat_id,
                      message_id=query.message.message_id)
 
-    bot.send_message(text="Выберите число:",
+    send_with_retry(bot=bot, text="Выберите число:",
                      chat_id=query.message.chat_id,
                      message_id=query.message.message_id)
 
@@ -276,7 +276,7 @@ def end_time_to_commit_pick(bot, update):
     username = query.message.chat_id
     user_data = repository.user_data[username]
 
-    bot.send_message(chat_id=username,
+    send_with_retry(bot=bot, chat_id=username,
                      text=f"Выбрано время:\n{user_data[consts.DAY_PICKED]}"
                           f" {dateutilbot.morph_month_name(dateutilbot.month_map[user_data[consts.MONTH_PICKED]])}"
                           f" от {user_data[consts.START_TIME_PICKED]}"
@@ -293,7 +293,7 @@ def end_time_to_commit_pick(bot, update):
     if datacore.repository.get_user_info(username) is not None:
         print_commit(bot, username)
     else:
-        bot.send_message(chat_id=username,
+        send_with_retry(bot=bot, chat_id=username,
                          text=f"Введите контактный номер телефона")
 
 
@@ -304,14 +304,14 @@ def print_commit(bot, username):
          InlineKeyboardButton(text="Нет",
                               callback_data=CallData(call_type=consts.COMMITTED, call_val="False").to_json())]]
 
-    bot.send_message(chat_id=username,
+    send_with_retry(bot=bot, chat_id=username,
                      text=f"Подтверждаете выбор?", reply_markup=InlineKeyboardMarkup(inline_keyboard=commit_buttons))
 
 
 def phone_to_external_name_pick(bot, update):
     username = update.message.chat_id
     if not re.match(r"^\+?[\d\s-]{11,22}$", update.message.text):
-        bot.send_message(chat_id=username, text="Номер телефона некорректен, введите снова")
+        send_with_retry(bot=bot, chat_id=username, text="Номер телефона некорректен, введите снова")
         return
 
     phone = re.sub(pattern=r"[\s-]", repl="", string=re.sub(pattern="^8", repl="+7", string=update.message.text))
@@ -319,14 +319,14 @@ def phone_to_external_name_pick(bot, update):
 
     repository.update_stance(stance=consts.PHONE_PICKED, user=update.message.chat_id)
 
-    bot.send_message(chat_id=username, text="Введите имя коллектива")
+    send_with_retry(bot=bot, chat_id=username, text="Введите имя коллектива")
 
 
 def external_name_to_commit_pick(bot, update):
     username = update.message.chat_id
     message = update.message.text
     if len(message) > 50:
-        bot.send_message(chat_id=username, text="Название слишком длинное, введите снова")
+        send_with_retry(bot=bot, chat_id=username, text="Название слишком длинное, введите снова")
         return
 
     message = re.sub("\n", "", message)
@@ -343,18 +343,18 @@ def commit_pick(bot, update):
 
     if datacore.data_as_json(query.data).val == "False":
         repository.purge_user(username)
-        bot.send_message(chat_id=username, text=f"Заказ отменён")
+        send_with_retry(bot=bot, chat_id=username, text=f"Заказ отменён")
         return
 
     repository.book_range(username, query.from_user.name)
-    bot.send_message(chat_id=username, text=f"Заказ подтверждён")
-    bot.send_message(chat_id=username, text=f"Уважаемые музыканты, если Вы передумали, или по каким-либо причинам"
+    send_with_retry(bot=bot, chat_id=username, text=f"Заказ подтверждён")
+    send_with_retry(bot=bot, chat_id=username, text=f"Уважаемые музыканты, если Вы передумали, или по каким-либо причинам"
                                             f" не сможете посетить студию в выбранное вами время, просьба отменить"
                                             f" бронь, как минимум за сутки.\nДля этого введите /unbook")
 
     user_info = repository.get_user_info(username)
     for x in config_holder.adm:
-        bot.send_message(chat_id=x,
+        send_with_retry(bot=bot, chat_id=x,
                          text=f"Заказ пользователем {query.from_user.name}\nКонтактный телефон:\n"
                               f"{user_info.phone}\nКоллектив:\n{user_info.name}\n"
                               f"На дату:\n{user_data[consts.DAY_PICKED]}"
@@ -370,7 +370,7 @@ def unbook(bot, update):
     booked_ranges = datacore.repository.get_booked_for_user(update.message.chat_id)
 
     if len(booked_ranges) == 0:
-        bot.send_message(chat_id=update.message.chat_id, text="Вы не бронировали времени")
+        send_with_retry(bot=bot, chat_id=update.message.chat_id, text="Вы не бронировали времени")
         return
 
     booked_ranges_keys = [[InlineKeyboardButton(text=f'{x.start_date.strftime("%d/%m/%Y %H:%M")}-'
@@ -380,7 +380,7 @@ def unbook(bot, update):
                                                     call_val=x.id)
                                                 .to_json())] for x in booked_ranges]
 
-    bot.send_message(chat_id=update.message.chat_id, text="Выберите диапазон который нужно отменить",
+    send_with_retry(bot=bot, chat_id=update.message.chat_id, text="Выберите диапазон который нужно отменить",
                      reply_markup=InlineKeyboardMarkup(inline_keyboard=booked_ranges_keys))
 
 
@@ -395,12 +395,12 @@ def remove_range(bot, update):
     bot.deleteMessage(chat_id=update.callback_query.message.chat_id,
                       message_id=update.callback_query.message.message_id)
 
-    bot.send_message(chat_id=username, text=f"Заказ удалён")
+    send_with_retry(bot=bot, chat_id=username, text=f"Заказ удалён")
 
     user_info = repository.get_user_info(username)
 
     for x in config_holder.adm:
-        bot.send_message(chat_id=x,
+        send_with_retry(bot=bot, chat_id=x,
                          text=f"Удалён заказ {query.from_user.name}\nКонтактный телефон:\n{user_info.phone}\n"
                               f"Коллектив:\n{user_info.name}\nНа дату:\n{book_data.start_date.day}"
                               f" {dateutilbot.morph_month_name(dateutilbot.month_map[book_data.start_date.month])}"
@@ -416,12 +416,12 @@ def change_role(bot, update):
         return
     if username_res in config_holder.adm:
         config_holder.adm.remove(username_res)
-        bot.send_message(chat_id=username_from, text=f"Пользователь потерял права админа")
-        bot.send_message(chat_id=username_res, text=f"BookingBot отнял у вас права админа")
+        send_with_retry(bot=bot, chat_id=username_from, text=f"Пользователь потерял права админа")
+        send_with_retry(bot=bot, chat_id=username_res, text=f"BookingBot отнял у вас права админа")
     else:
         config_holder.adm.append(username_res)
-        bot.send_message(chat_id=username_from, text=f"Пользователь получил права админа")
-        bot.send_message(chat_id=username_res, text=f"BookingBot даровал вам права админа")
+        send_with_retry(bot=bot, chat_id=username_from, text=f"Пользователь получил права админа")
+        send_with_retry(bot=bot, chat_id=username_res, text=f"BookingBot даровал вам права админа")
     pass
 
 
@@ -434,9 +434,9 @@ def clear_info(bot, update):
     pass
     # try:
     #     repository.clear_user_info(update.message.chat_id)
-    #     bot.send_message(chat_id=update.message.chat_id, text=f"Ваш профиль очищен")
+    #     send_with_retry(chat_id=update.message.chat_id, text=f"Ваш профиль очищен")
     # except datacore.NoSuchUser:
-    #     bot.send_message(chat_id=update.message.chat_id, text=f"О вашем профиле нет данных")
+    #     send_with_retry(chat_id=update.message.chat_id, text=f"О вашем профиле нет данных")
 
 
 

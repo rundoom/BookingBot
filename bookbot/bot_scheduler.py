@@ -5,8 +5,8 @@ import os
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from bookbot import config_holder, datacore, bookingbot
-
+from bookbot import config_holder, datacore, bookingbot, dispatcher
+from retrying import retry
 bot = None
 scheduler = None
 
@@ -54,14 +54,14 @@ def send_notification(username, hour_num, book_id):
     user_info = datacore.repository.get_user_info(username)
     booked = datacore.repository.get_booked_by_id(book_id)
     for x in config_holder.adm:
-        bot.send_message(chat_id=x,
+        dispatcher.send_with_retry(chat_id=x,
                          text=f"Напоминание:\nЧерез {hour_num} часа забронировано на:\n"
                               f"{user_info.userlink}\nКонтактный телефон:\n{user_info.phone}\n"
                               f"Коллектив:\n{user_info.name}\n"
                               f"от {booked.start_date.hour}:00"
                               f" до {booked.end_date.hour}:00")
 
-    bot.send_message(chat_id=username,
+        dispatcher.send_with_retry(chat_id=username,
                      text=f"Напоминание:\nЧерез {hour_num} часа забронировано время в студии\n"
                           f"от {booked.start_date.hour}:00"
                           f" до {booked.end_date.hour}:00")

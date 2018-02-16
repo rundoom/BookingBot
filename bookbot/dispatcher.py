@@ -1,6 +1,9 @@
-from telegram import Update
 import re
+
 from future.utils import string_types
+from retrying import retry
+from telegram import Update
+from telegram.error import NetworkError
 from telegram.ext import CallbackQueryHandler
 
 
@@ -48,3 +51,22 @@ class FilteredCallbackQueryHandler(CallbackQueryHandler):
                     return bool(match)
             else:
                 return True
+
+
+def is_network(error):
+    return isinstance(error, NetworkError)
+
+
+@retry(wait_exponential_multiplier=200, wait_exponential_max=5000,
+       stop_max_attempt_number=10, retry_on_exception=is_network)
+def send_with_retry(bot,
+                    chat_id,
+                    text,
+                    parse_mode=None,
+                    disable_web_page_preview=None,
+                    disable_notification=False,
+                    reply_to_message_id=None,
+                    reply_markup=None,
+                    timeout=None,
+                    **kwargs):
+    bot.send_message(text=text, chat_id=chat_id, reply_markup=reply_markup)

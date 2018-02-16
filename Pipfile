@@ -12,6 +12,7 @@ python-telegram-bot = "*"
 "e1839a8" = {path = ".", editable = true}
 sqlalchemy = "*"
 apscheduler = "*"
+retrying = "*"
 
 
 [dev-packages]
